@@ -23,7 +23,7 @@ export const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     label: "Cerebras",
     baseUrl: process.env.CEREBRAS_BASE_URL || "https://api.cerebras.ai/v1",
     apiKey: process.env.CEREBRAS_API_KEY,
-    model: process.env.CEREBRAS_MODEL || "gemma-3-27b-it",
+    model: process.env.CEREBRAS_MODEL || "gemma-4-31b",
     simTps: 1100,
     simTtftMs: 90,
   },
@@ -64,6 +64,21 @@ export function streamProvider(providerId: ProviderId, messages: ChatMessage[]):
   return realStream(cfg, messages);
 }
 
+// Some Gemma hosts (notably Google's generativelanguage OpenAI-compat endpoint)
+// reject the `system` role. Fold any system message into the first user turn for
+// those hosts so the same prompt works everywhere.
+function normalizeMessages(cfg: ProviderConfig, messages: ChatMessage[]): ChatMessage[] {
+  const noSystem = /generativelanguage\.googleapis\.com/.test(cfg.baseUrl);
+  if (!noSystem) return messages;
+  const sys = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+  const rest = messages.filter((m) => m.role !== "system");
+  if (!sys) return rest;
+  const firstUser = rest.findIndex((m) => m.role === "user");
+  if (firstUser === -1) return [{ role: "user", content: sys }, ...rest];
+  rest[firstUser] = { ...rest[firstUser], content: `${sys}\n\n${rest[firstUser].content}` };
+  return rest;
+}
+
 function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -93,7 +108,7 @@ function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStrea
             "Content-Type": "application/json",
             Authorization: `Bearer ${cfg.apiKey}`,
           },
-          body: JSON.stringify({ model: cfg.model, messages, stream: true, temperature: 0.3, max_tokens: 700 }),
+          body: JSON.stringify({ model: cfg.model, messages: normalizeMessages(cfg, messages), stream: true, temperature: 0.3, max_tokens: 700 }),
         });
 
         if (!res.ok || !res.body) {
