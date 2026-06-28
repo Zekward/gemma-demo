@@ -16,7 +16,6 @@ Two north stars:
 - [ ] Accessibility: focus states, aria-live for streaming regions (reduced-motion done in cycle 3)
 - [ ] Empty/loading states refinement
 - [ ] Mobile/responsive tightening
-- [ ] Header: tighten the value prop, add a subtle AIQ/Cerebras lockup
 
 ## Done
 - [x] **Cycle 1 — Live race strip + speedup multiplier.** Two lanes fill in real time above the
@@ -35,8 +34,11 @@ Two north stars:
       axis. Cerebras spikes near-vertical at the left; the GPU curve crawls across the bottom — the
       speed gap is legible at a glance. Live time-series collected from the metric stream
       (`appendSample`). Verified in browser mid-race (23× run, Cerebras 312 t/s).
+- [x] **Cycle 5 — Product masthead (de-vibecode header).** Replaced the inline "AIQ Bond
+      Intelligence" text with a monogram lockup (rounded "AIQ" mark + wordmark + refined tagline),
+      a structured "Analyst query" chip with divider, a cleaner CTA (dropped the ▶ glyph) with a
+      `focus-visible` ring, and a header bottom-border for structure. Verified in browser.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.
 - Tooling note: browser-preview MCP is bound to this repo dir + port 3000; run the dev server here.
-</content>

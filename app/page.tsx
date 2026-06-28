@@ -328,32 +328,41 @@ function RaceStrip({
 
 function Header({ onRun, running, a, b, warm }: { onRun: () => void; running: boolean; a: any; b: any; warm: "warming" | "ready" | "sim" }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-          <span className="text-[var(--cerebras)]">AIQ</span>{" "}
-          <span className="text-[var(--foreground)]">Bond Intelligence</span>
-        </h1>
-        <p className="text-xs text-[var(--muted)] mt-0.5">
-          Real-time, formally-verified credit research · Cerebras + Gemma
-        </p>
-      </div>
+    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-4 border-b border-[var(--border)]">
       <div className="flex items-center gap-3">
-        <div className="hidden md:block text-right">
-          <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">Query</div>
-          <div className="text-sm mono">
+        <span
+          aria-hidden
+          className="grid place-items-center h-10 w-10 rounded-xl bg-[var(--cerebras)] text-black font-extrabold text-base tracking-tight shadow-[0_0_22px_-8px_var(--cerebras)]"
+        >
+          AIQ
+        </span>
+        <div>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight leading-none">
+            Bond Intelligence
+          </h1>
+          <p className="text-[11px] text-[var(--muted)] mt-1.5">
+            Real-time, formally-verified credit research ·{" "}
+            <span className="text-[var(--foreground)]/80">Cerebras + Gemma</span>
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="hidden md:block text-right border-r border-[var(--border)] pr-4">
+          <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Analyst query</div>
+          <div className="text-[13px] mono mt-0.5">
             Compare {a.ticker} ’{a.maturity.slice(2, 4)} vs {b.ticker} ’{b.maturity.slice(2, 4)} — better buy?
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-1.5">
           <button
             onClick={onRun}
             disabled={running}
             className="rounded-lg px-5 py-2.5 font-semibold text-sm transition
               bg-[var(--cerebras)] text-black hover:brightness-110 disabled:opacity-50
-              disabled:cursor-not-allowed shadow-[0_0_24px_-6px_var(--cerebras)]"
+              disabled:cursor-not-allowed shadow-[0_0_24px_-6px_var(--cerebras)]
+              focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cerebras)]"
           >
-            {running ? "Running…" : "▶ Run comparison"}
+            {running ? "Running…" : "Run comparison"}
           </button>
           <WarmBadge warm={warm} />
         </div>
