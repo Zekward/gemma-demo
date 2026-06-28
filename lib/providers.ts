@@ -64,6 +64,37 @@ export function streamProvider(providerId: ProviderId, messages: ChatMessage[]):
   return realStream(cfg, messages);
 }
 
+// Cold-start hurts the on-camera race: the first request to a provider pays model
+// load + connection setup, so a cold Cerebras run can measure 4s TTFT / 36 tok/s
+// instead of its true ~0.2s / hundreds of tok/s. We fire a throwaway 1-token
+// request per provider on page load so the *measured* run reflects steady-state
+// speed. No-op (and instant) in simulated mode.
+export type WarmupResult = { provider: ProviderId; ok: boolean; ms: number; simulated: boolean };
+
+export async function warmupProvider(providerId: ProviderId): Promise<WarmupResult> {
+  const cfg = PROVIDERS[providerId];
+  const start = Date.now();
+  if (!cfg.apiKey) return { provider: providerId, ok: true, ms: 0, simulated: true };
+  try {
+    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.apiKey}` },
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: normalizeMessages(cfg, [{ role: "user", content: "ping" }]),
+        stream: false,
+        max_tokens: 1,
+        temperature: 0,
+      }),
+    });
+    // drain the body so the connection can be reused from the pool
+    await res.text().catch(() => "");
+    return { provider: providerId, ok: res.ok, ms: Date.now() - start, simulated: false };
+  } catch {
+    return { provider: providerId, ok: false, ms: Date.now() - start, simulated: false };
+  }
+}
+
 // Some Gemma hosts (notably Google's generativelanguage OpenAI-compat endpoint)
 // reject the `system` role. Fold any system message into the first user turn for
 // those hosts so the same prompt works everywhere.

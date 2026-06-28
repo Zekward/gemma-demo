@@ -11,9 +11,6 @@ Two north stars:
 2. **Reduce the "vibecoded" feel** — intentional, dense, terminal-grade UI; not generic AI dark theme.
 
 ## Backlog (unordered ideas)
-- [ ] **Cerebras speed variance** — saw 446 t/s (TTFT 191ms) one run, 36 t/s (TTFT 4071ms) another.
-      Investigate model id `gemma-4-31b` correctness, throttling, warm-up; the "fast inference"
-      story collapses if Cerebras lands at 36 t/s on camera. Consider a warm-up ping before the race.
 - [ ] Cumulative tokens-over-time sparkline per provider
 - [ ] Typography & spacing polish pass (less generic dark-theme)
 - [ ] Number formatting (thousands separators, monospaced tabular figures)
@@ -26,6 +23,10 @@ Two north stars:
 - [x] **Cycle 1 — Live race strip + speedup multiplier.** Two lanes fill in real time above the
       panels; Cerebras saturates + shows "✓ done · proving…" while "GPU still generating…". Center
       shows live `N×` throughput ratio. Verified in browser end-to-end.
+- [x] **Cycle 2 — Warm-up ping (fixes cold-start credibility).** New `/api/warmup` fires a 1-token
+      request to both engines on page load (`lib/providers.ts:warmupProvider`); a green "engines
+      warm · steady-state speed" badge appears under Run. Measured impact: Cerebras TTFT 4071ms→712ms,
+      36→151 t/s, headline 3.6×→**11×** on a warm run. No-op + "simulated" label without keys.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

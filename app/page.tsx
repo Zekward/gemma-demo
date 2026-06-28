@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BONDS, getBond, buildGraph, similarBonds } from "@/lib/bonds";
 import KnowledgeGraph from "@/components/KnowledgeGraph";
 import Ingestion from "@/components/Ingestion";
@@ -39,6 +39,18 @@ export default function Home() {
   const [verifyState, setVerifyState] = useState<"idle" | "running" | "done">("idle");
   const [showSimilar, setShowSimilar] = useState(false);
   const [scanSignal, setScanSignal] = useState(0);
+  const [warm, setWarm] = useState<"warming" | "ready" | "sim">("warming");
+
+  // Pre-warm both engines on load so the first measured race reflects
+  // steady-state speed, not cold-start latency.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/warmup", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => { if (alive) setWarm(d?.cerebras?.simulated ? "sim" : "ready"); })
+      .catch(() => { if (alive) setWarm("ready"); });
+    return () => { alive = false; };
+  }, []);
 
   const a = getBond(aId)!;
   const b = getBond(bId)!;
@@ -137,7 +149,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen w-full px-4 sm:px-6 py-5 max-w-[1400px] mx-auto">
-      <Header onRun={run} running={running} a={a} b={b} />
+      <Header onRun={run} running={running} a={a} b={b} warm={warm} />
 
       <BondPickers
         aId={aId} bId={bId} setAId={setAId} setBId={setBId}
@@ -269,7 +281,7 @@ function RaceStrip({
   );
 }
 
-function Header({ onRun, running, a, b }: { onRun: () => void; running: boolean; a: any; b: any }) {
+function Header({ onRun, running, a, b, warm }: { onRun: () => void; running: boolean; a: any; b: any; warm: "warming" | "ready" | "sim" }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div>
@@ -288,17 +300,40 @@ function Header({ onRun, running, a, b }: { onRun: () => void; running: boolean;
             Compare {a.ticker} ’{a.maturity.slice(2, 4)} vs {b.ticker} ’{b.maturity.slice(2, 4)} — better buy?
           </div>
         </div>
-        <button
-          onClick={onRun}
-          disabled={running}
-          className="rounded-lg px-5 py-2.5 font-semibold text-sm transition
-            bg-[var(--cerebras)] text-black hover:brightness-110 disabled:opacity-50
-            disabled:cursor-not-allowed shadow-[0_0_24px_-6px_var(--cerebras)]"
-        >
-          {running ? "Running…" : "▶ Run comparison"}
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={onRun}
+            disabled={running}
+            className="rounded-lg px-5 py-2.5 font-semibold text-sm transition
+              bg-[var(--cerebras)] text-black hover:brightness-110 disabled:opacity-50
+              disabled:cursor-not-allowed shadow-[0_0_24px_-6px_var(--cerebras)]"
+          >
+            {running ? "Running…" : "▶ Run comparison"}
+          </button>
+          <WarmBadge warm={warm} />
+        </div>
       </div>
     </header>
+  );
+}
+
+function WarmBadge({ warm }: { warm: "warming" | "ready" | "sim" }) {
+  if (warm === "sim") {
+    return <span className="text-[10px] text-[var(--muted)] mono">simulated · no warm-up needed</span>;
+  }
+  if (warm === "warming") {
+    return (
+      <span className="text-[10px] text-[var(--muted)] mono flex items-center gap-1">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--cerebras-2)] pulse" />
+        warming engines…
+      </span>
+    );
+  }
+  return (
+    <span className="text-[10px] text-[var(--good)] mono flex items-center gap-1">
+      <span className="h-1.5 w-1.5 rounded-full bg-[var(--good)]" />
+      engines warm · steady-state speed
+    </span>
   );
 }
 
