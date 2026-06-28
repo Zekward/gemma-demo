@@ -146,6 +146,12 @@ export default function Home() {
 
       <Ingestion scanSignal={scanSignal} />
 
+      <RaceStrip
+        c={cMetrics} g={gMetrics}
+        cStatus={cStatus} gStatus={gStatus}
+        verifyState={verifyState} verifiedCount={verifiedCount} claimCount={claims.length}
+      />
+
       {/* SPLIT SCREEN */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <ProviderPanel
@@ -196,6 +202,72 @@ export default function Home() {
 }
 
 /* ---------- components ---------- */
+
+// The visceral proof: two lanes filling in real time. Cerebras saturates almost
+// instantly and gets verified while the GPU lane is still crawling. The center
+// readout turns the raw tok/s gap into a single "Nx faster" number.
+function RaceStrip({
+  c, g, cStatus, gStatus, verifyState, verifiedCount, claimCount,
+}: {
+  c: Metrics | null; g: Metrics | null;
+  cStatus: Status; gStatus: Status;
+  verifyState: "idle" | "running" | "done"; verifiedCount: number; claimCount: number;
+}) {
+  const TARGET = 150; // approx tokens in a full verdict — lanes fill toward this
+  const cFill = c ? Math.min(1, c.tokens / TARGET) : 0;
+  const gFill = g ? Math.min(1, g.tokens / TARGET) : 0;
+  const speedup = c && g && g.tps > 0 ? c.tps / g.tps : null;
+  const idle = cStatus === "idle" && gStatus === "idle";
+
+  const Lane = ({ fill, status, label, accent }: { fill: number; status: Status; label: string; accent?: boolean }) => (
+    <div className="flex items-center gap-2">
+      <span className={`w-20 shrink-0 text-[11px] font-semibold ${accent ? "text-[var(--cerebras)]" : "text-[var(--muted)]"}`}>{label}</span>
+      <div className="relative flex-1 h-2.5 rounded-full bg-[var(--panel-2)] overflow-hidden">
+        <div
+          className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-200 ease-out ${accent ? "bg-[var(--cerebras)]" : "bg-[var(--gpu)]"}`}
+          style={{ width: `${fill * 100}%`, boxShadow: accent && fill > 0 ? "0 0 12px -2px var(--cerebras)" : undefined }}
+        />
+      </div>
+      <span className={`w-14 shrink-0 text-right mono text-[11px] ${status === "done" ? "text-[var(--good)]" : "text-[var(--muted)]"}`}>
+        {status === "done" ? "✓ done" : status === "streaming" ? `${Math.round(fill * 100)}%` : "—"}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+      <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+        <Lane fill={cFill} status={cStatus} label="Cerebras" accent />
+        <Lane fill={gFill} status={gStatus} label="GPU host" />
+      </div>
+      <div className="flex items-center justify-center sm:border-l border-[var(--border)] sm:pl-5 min-w-[150px]">
+        {idle ? (
+          <span className="text-xs text-[var(--muted)]">Run a comparison to race the engines.</span>
+        ) : speedup ? (
+          <div className="text-center leading-none">
+            <div className="mono font-bold text-2xl text-[var(--cerebras)]">{speedup.toFixed(speedup >= 10 ? 0 : 1)}×</div>
+            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mt-1">Cerebras throughput</div>
+          </div>
+        ) : (
+          <span className="text-xs text-[var(--muted)] pulse">measuring…</span>
+        )}
+      </div>
+      <div className="sm:border-l border-[var(--border)] sm:pl-5 text-[11px] mono text-right min-w-[140px]">
+        {cStatus === "done" && gStatus !== "done" && (
+          <span className="text-[var(--good)]">
+            Cerebras done{verifyState === "done" ? ` · ${verifiedCount}/${claimCount} proved` : verifyState === "running" ? " · proving…" : ""}
+            <br />
+            <span className="text-[var(--muted)]">GPU still generating…</span>
+          </span>
+        )}
+        {cStatus === "done" && gStatus === "done" && (
+          <span className="text-[var(--muted)]">both complete · Cerebras led</span>
+        )}
+        {!(cStatus === "done") && !idle && <span className="text-[var(--muted)]">racing…</span>}
+      </div>
+    </div>
+  );
+}
 
 function Header({ onRun, running, a, b }: { onRun: () => void; running: boolean; a: any; b: any }) {
   return (
