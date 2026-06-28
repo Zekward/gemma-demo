@@ -150,63 +150,56 @@ function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStrea
 
 // Honest fallback: replays a grounded analysis at each engine's characteristic
 // speed so the UI is fully functional before API keys are wired in. Clearly
-// flagged `simulated: true` on the metrics so it is never mistaken for live.
-function simulatedStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStream<Uint8Array> {
-  const body = SIM_ANALYSIS;
-  const words = body.split(/(\s+)/); // keep whitespace tokens
-  const msPerWord = 1000 / (cfg.simTps / 1.3); // simTps is tok/s; ~1.3 tok/word
+// flagged `simulated: true`.
+//
+// Metrics are derived from each engine's INTENDED rate, not from wall-clock, and
+// the stream advances on a coarse fixed tick (chunking more words per tick for
+// faster engines). This keeps the simulated contrast stable across repeated runs
+// and immune to event-loop / GC load — unlike a per-token setTimeout loop, whose
+// measured tok/s collapses when two streams compete for the event loop.
+const SIM_TICK_MS = 40;
+
+function simulatedStream(cfg: ProviderConfig, _messages: ChatMessage[]): ReadableStream<Uint8Array> {
+  const words = SIM_ANALYSIS.split(/(\s+)/); // keep whitespace tokens
+  const wordsPerSec = cfg.simTps / 1.3; // ~1.3 tok/word
+  const wordsPerTick = Math.max(1, Math.round(wordsPerSec * (SIM_TICK_MS / 1000)));
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      const start = Date.now();
-      let ttftMs: number | null = null;
       let text = "";
       let i = 0;
 
-      await new Promise((r) => setTimeout(r, cfg.simTtftMs));
-
-      const tick = () => {
-        if (i >= words.length) {
-          const elapsedMs = Date.now() - start;
-          controller.enqueue(
-            sse({
-              t: "done",
-              m: {
-                provider: cfg.id,
-                ttftMs,
-                tokens: approxTokens(text),
-                elapsedMs,
-                tps: +(approxTokens(text) / (elapsedMs / 1000)).toFixed(1),
-                simulated: true,
-                model: cfg.model,
-              } satisfies Metrics,
-            }),
-          );
-          controller.close();
-          return;
-        }
-        if (ttftMs === null) ttftMs = Date.now() - start;
-        const w = words[i++];
-        text += w;
-        controller.enqueue(sse({ t: "token", v: w }));
-        const elapsedMs = Date.now() - start;
-        controller.enqueue(
-          sse({
-            t: "metrics",
-            m: {
-              provider: cfg.id,
-              ttftMs,
-              tokens: approxTokens(text),
-              elapsedMs,
-              tps: +(approxTokens(text) / (elapsedMs / 1000)).toFixed(1),
-              simulated: true,
-              model: cfg.model,
-            } satisfies Metrics,
-          }),
-        );
-        setTimeout(tick, msPerWord);
+      const metrics = (final: boolean): { t: string; m: Metrics } => {
+        const tokens = approxTokens(text) || 1;
+        // virtual elapsed implied by the intended rate (deterministic)
+        const elapsedMs = Math.round(cfg.simTtftMs + (tokens / cfg.simTps) * 1000);
+        return {
+          t: final ? "done" : "metrics",
+          m: {
+            provider: cfg.id,
+            ttftMs: cfg.simTtftMs,
+            tokens,
+            elapsedMs,
+            tps: cfg.simTps,
+            simulated: true,
+            model: cfg.model,
+          },
+        };
       };
-      tick();
+
+      await sleep(cfg.simTtftMs);
+
+      while (i < words.length) {
+        let chunk = "";
+        for (let n = 0; n < wordsPerTick && i < words.length; n++) chunk += words[i++];
+        text += chunk;
+        controller.enqueue(sse({ t: "token", v: chunk }));
+        controller.enqueue(sse(metrics(false)));
+        await sleep(SIM_TICK_MS);
+      }
+      controller.enqueue(sse(metrics(true)));
+      controller.close();
     },
   });
 }
