@@ -15,6 +15,19 @@ type Metrics = {
   model: string;
 };
 type Status = "idle" | "streaming" | "done" | "error";
+type Sample = { ms: number; tokens: number };
+
+// Append a {ms, tokens} point, keeping the series monotonic and de-duped on time
+// so the throughput chart stays clean under the ~80ms metric cadence.
+function appendSample(prev: Sample[], m: Metrics): Sample[] {
+  const pt = { ms: m.elapsedMs, tokens: m.tokens };
+  const last = prev[prev.length - 1];
+  if (last && pt.ms <= last.ms) {
+    // same tick: replace with the latest token count
+    return [...prev.slice(0, -1), { ms: last.ms, tokens: Math.max(last.tokens, pt.tokens) }];
+  }
+  return [...prev, pt];
+}
 type Claim = { id: string; title: string; plainEnglish: string; leanName: string; leanStatement: string };
 type Verdict = { id: string; leanName: string; verified: boolean };
 
@@ -27,6 +40,9 @@ export default function Home() {
   const [gText, setGText] = useState("");
   const [cMetrics, setCMetrics] = useState<Metrics | null>(null);
   const [gMetrics, setGMetrics] = useState<Metrics | null>(null);
+  // time-series of {ms, tokens} per provider, for the throughput chart
+  const [cSamples, setCSamples] = useState<Sample[]>([]);
+  const [gSamples, setGSamples] = useState<Sample[]>([]);
   const [cStatus, setCStatus] = useState<Status>("idle");
   const [gStatus, setGStatus] = useState<Status>("idle");
   const [cThinking, setCThinking] = useState(false);
@@ -60,6 +76,7 @@ export default function Home() {
 
   const reset = () => {
     setCText(""); setGText(""); setCMetrics(null); setGMetrics(null);
+    setCSamples([]); setGSamples([]);
     setCStatus("idle"); setGStatus("idle");
     setCThinking(false); setGThinking(false);
     setClaims([]); setVerdicts({}); setRevealed(0); setLeanInfo(null);
@@ -137,8 +154,10 @@ export default function Home() {
     reset();
     setRunning(true);
     setScanSignal((s) => s + 1);
-    const cerebras = streamProvider("cerebras", (s) => setCText((t) => t + s), setCMetrics, setCStatus, setCThinking);
-    const gpu = streamProvider("gpu", (s) => setGText((t) => t + s), setGMetrics, setGStatus, setGThinking);
+    const onC = (m: Metrics) => { setCMetrics(m); setCSamples((s) => appendSample(s, m)); };
+    const onG = (m: Metrics) => { setGMetrics(m); setGSamples((s) => appendSample(s, m)); };
+    const cerebras = streamProvider("cerebras", (s) => setCText((t) => t + s), onC, setCStatus, setCThinking);
+    const gpu = streamProvider("gpu", (s) => setGText((t) => t + s), onG, setGStatus, setGThinking);
     await cerebras; // Cerebras finishes first -> verify immediately
     await runVerify();
     await gpu; // let the GPU side finish in the background
@@ -160,6 +179,7 @@ export default function Home() {
 
       <RaceStrip
         c={cMetrics} g={gMetrics}
+        cSamples={cSamples} gSamples={gSamples}
         cStatus={cStatus} gStatus={gStatus}
         verifyState={verifyState} verifiedCount={verifiedCount} claimCount={claims.length}
       />
@@ -215,42 +235,67 @@ export default function Home() {
 
 /* ---------- components ---------- */
 
-// The visceral proof: two lanes filling in real time. Cerebras saturates almost
-// instantly and gets verified while the GPU lane is still crawling. The center
-// readout turns the raw tok/s gap into a single "Nx faster" number.
+// Overlays both providers' cumulative-token curves on a shared time axis. The
+// contrast is the whole point: Cerebras spikes near-vertical at the left while
+// the GPU curve crawls along the bottom — fast inference made legible at a glance.
+function ThroughputChart({ cSamples, gSamples, idle }: { cSamples: Sample[]; gSamples: Sample[]; idle: boolean }) {
+  const W = 100, H = 40, padL = 1.5, padR = 1.5, padT = 3, padB = 2;
+  const maxMs = Math.max(1, ...cSamples.map((s) => s.ms), ...gSamples.map((s) => s.ms));
+  const maxTok = Math.max(1, ...cSamples.map((s) => s.tokens), ...gSamples.map((s) => s.tokens));
+  const xa = (W - padL - padR) / maxMs;
+  const ya = (H - padT - padB) / maxTok;
+  const X = (ms: number) => padL + ms * xa;
+  const Y = (tok: number) => H - padB - tok * ya;
+  const path = (s: Sample[]) => s.map((p, i) => `${i === 0 ? "M" : "L"}${X(p.ms).toFixed(2)} ${Y(p.tokens).toFixed(2)}`).join(" ");
+
+  const cLast = cSamples[cSamples.length - 1];
+  const gLast = gSamples[gSamples.length - 1];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[68px]" preserveAspectRatio="none">
+      {/* baseline */}
+      <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--border)" strokeWidth={0.3} vectorEffect="non-scaling-stroke" />
+      {idle && (
+        <text x={W / 2} y={H / 2} textAnchor="middle" fontSize={3} fill="var(--muted)">
+          run a comparison to plot throughput
+        </text>
+      )}
+      {gSamples.length > 1 && (
+        <path d={path(gSamples)} fill="none" stroke="var(--gpu)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+      )}
+      {cSamples.length > 1 && (
+        <path d={path(cSamples)} fill="none" stroke="var(--cerebras)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+      )}
+      {gLast && <circle cx={X(gLast.ms)} cy={Y(gLast.tokens)} r={0.9} fill="var(--gpu)" vectorEffect="non-scaling-stroke" />}
+      {cLast && <circle cx={X(cLast.ms)} cy={Y(cLast.tokens)} r={1.1} fill="var(--cerebras)" vectorEffect="non-scaling-stroke" />}
+    </svg>
+  );
+}
+
+// The visceral proof: a shared-axis throughput chart (Cerebras spikes, GPU crawls)
+// plus a single "Nx faster" readout and the "done & verified before GPU finishes" status.
 function RaceStrip({
-  c, g, cStatus, gStatus, verifyState, verifiedCount, claimCount,
+  c, g, cSamples, gSamples, cStatus, gStatus, verifyState, verifiedCount, claimCount,
 }: {
   c: Metrics | null; g: Metrics | null;
+  cSamples: Sample[]; gSamples: Sample[];
   cStatus: Status; gStatus: Status;
   verifyState: "idle" | "running" | "done"; verifiedCount: number; claimCount: number;
 }) {
-  const TARGET = 150; // approx tokens in a full verdict — lanes fill toward this
-  const cFill = c ? Math.min(1, c.tokens / TARGET) : 0;
-  const gFill = g ? Math.min(1, g.tokens / TARGET) : 0;
   const speedup = c && g && g.tps > 0 ? c.tps / g.tps : null;
   const idle = cStatus === "idle" && gStatus === "idle";
 
-  const Lane = ({ fill, status, label, accent }: { fill: number; status: Status; label: string; accent?: boolean }) => (
-    <div className="flex items-center gap-2">
-      <span className={`w-20 shrink-0 text-[11px] font-semibold ${accent ? "text-[var(--cerebras)]" : "text-[var(--muted)]"}`}>{label}</span>
-      <div className="relative flex-1 h-2.5 rounded-full bg-[var(--panel-2)] overflow-hidden">
-        <div
-          className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-200 ease-out ${accent ? "bg-[var(--cerebras)]" : "bg-[var(--gpu)]"}`}
-          style={{ width: `${fill * 100}%`, boxShadow: accent && fill > 0 ? "0 0 12px -2px var(--cerebras)" : undefined }}
-        />
-      </div>
-      <span className={`w-14 shrink-0 text-right mono text-[11px] ${status === "done" ? "text-[var(--good)]" : "text-[var(--muted)]"}`}>
-        {status === "done" ? "✓ done" : status === "streaming" ? `${Math.round(fill * 100)}%` : "—"}
-      </span>
-    </div>
-  );
-
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-      <div className="flex-1 flex flex-col gap-1.5 min-w-0">
-        <Lane fill={cFill} status={cStatus} label="Cerebras" accent />
-        <Lane fill={gFill} status={gStatus} label="GPU host" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Cumulative tokens over time</span>
+          <span className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1 text-[var(--cerebras)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--cerebras)]" />Cerebras</span>
+            <span className="flex items-center gap-1 text-[var(--muted)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--gpu)]" />GPU host</span>
+          </span>
+        </div>
+        <ThroughputChart cSamples={cSamples} gSamples={gSamples} idle={idle} />
       </div>
       <div className="flex items-center justify-center sm:border-l border-[var(--border)] sm:pl-5 min-w-[150px]">
         {idle ? (

@@ -11,7 +11,6 @@ Two north stars:
 2. **Reduce the "vibecoded" feel** — intentional, dense, terminal-grade UI; not generic AI dark theme.
 
 ## Backlog (unordered ideas)
-- [ ] Cumulative tokens-over-time sparkline per provider
 - [ ] Typography & spacing polish pass (less generic dark-theme)
 - [ ] Number formatting (thousands separators, monospaced tabular figures)
 - [ ] Accessibility: focus states, aria-live for streaming regions (reduced-motion done in cycle 3)
@@ -31,6 +30,11 @@ Two north stars:
       designed three-dot "Reasoning" indicator (`dotPulse` keyframe, staggered delays); added
       `prefers-reduced-motion` support that holds pulse/dots/pop-in/caret still. Verified the
       indicator renders (injected-markup screenshot) since the thinking state rarely triggers live.
+- [x] **Cycle 4 — Shared throughput chart.** Upgraded the race strip: replaced the two lane bars
+      with a single SVG chart overlaying both providers' cumulative-token curves on a shared time
+      axis. Cerebras spikes near-vertical at the left; the GPU curve crawls across the bottom — the
+      speed gap is legible at a glance. Live time-series collected from the metric stream
+      (`appendSample`). Verified in browser mid-race (23× run, Cerebras 312 t/s).
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.
