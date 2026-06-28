@@ -15,7 +15,6 @@ Two north stars:
 - [ ] Number formatting (thousands separators, monospaced tabular figures)
 - [ ] Accessibility: focus states, aria-live for streaming regions (reduced-motion done in cycle 3)
 - [ ] Empty/loading states refinement
-- [ ] Mobile/responsive tightening
 
 ## Done
 - [x] **Cycle 1 — Live race strip + speedup multiplier.** Two lanes fill in real time above the
@@ -43,6 +42,10 @@ Two north stars:
       Lean proof-time as one number, with "N/N facts proved by Lean's kernel" and either "GPU still
       generating its first draft" or "GPU answered unverified in Xs". Verified in browser
       (e.g. verified in 3.2s vs GPU unverified in 6.6s).
+- [x] **Cycle 7 — Mobile QA pass + metric-row fix.** Audited 360/390px: masthead, controls,
+      race strip, banner all wrap cleanly with no page overflow. Found + fixed a real bug — the
+      provider panels' 4-up metric row clipped at 360px (308px in 294px); now a responsive
+      2×2 grid on mobile, 4-up (`sm:grid-cols-4`) on larger. Verified both breakpoints.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

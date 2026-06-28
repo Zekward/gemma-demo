@@ -514,7 +514,7 @@ function ProviderPanel({
       </div>
 
       {/* live metrics */}
-      <div className="flex gap-3 mt-3 pb-3 border-b border-[var(--border)]">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 mt-3 pb-3 border-b border-[var(--border)]">
         <MetricStat label="TTFT" value={metrics?.ttftMs != null ? String(metrics.ttftMs) : "—"} unit="ms" highlight={accent} />
         <MetricStat label="Tokens/s" value={metrics ? String(metrics.tps) : "—"} unit="t/s" highlight={accent} />
         <MetricStat label="Latency" value={metrics ? (metrics.elapsedMs / 1000).toFixed(2) : "—"} unit="s" />
