@@ -29,6 +29,8 @@ export default function Home() {
   const [gMetrics, setGMetrics] = useState<Metrics | null>(null);
   const [cStatus, setCStatus] = useState<Status>("idle");
   const [gStatus, setGStatus] = useState<Status>("idle");
+  const [cThinking, setCThinking] = useState(false);
+  const [gThinking, setGThinking] = useState(false);
 
   const [claims, setClaims] = useState<Claim[]>([]);
   const [verdicts, setVerdicts] = useState<Record<string, boolean>>({});
@@ -47,6 +49,7 @@ export default function Home() {
   const reset = () => {
     setCText(""); setGText(""); setCMetrics(null); setGMetrics(null);
     setCStatus("idle"); setGStatus("idle");
+    setCThinking(false); setGThinking(false);
     setClaims([]); setVerdicts({}); setRevealed(0); setLeanInfo(null);
     setVerifyState("idle"); setShowSimilar(false);
   };
@@ -56,6 +59,7 @@ export default function Home() {
     onToken: (s: string) => void,
     onMetrics: (m: Metrics) => void,
     setStatus: (s: Status) => void,
+    setThinking: (b: boolean) => void,
   ) {
     setStatus("streaming");
     const res = await fetch("/api/compare", {
@@ -78,10 +82,11 @@ export default function Home() {
         if (!line) continue;
         try {
           const ev = JSON.parse(line.slice(5).trim());
-          if (ev.t === "token") onToken(ev.v);
+          if (ev.t === "token") { onToken(ev.v); setThinking(false); }
+          else if (ev.t === "status") { if (ev.v === "thinking") setThinking(true); }
           else if (ev.t === "metrics") onMetrics(ev.m);
-          else if (ev.t === "done") { onMetrics(ev.m); setStatus("done"); }
-          else if (ev.t === "error") { onToken(`\n[error] ${ev.message}`); setStatus("error"); }
+          else if (ev.t === "done") { onMetrics(ev.m); setStatus("done"); setThinking(false); }
+          else if (ev.t === "error") { onToken(`\n[error] ${ev.message}`); setStatus("error"); setThinking(false); }
         } catch { /* skip */ }
       }
     }
@@ -120,8 +125,8 @@ export default function Home() {
     reset();
     setRunning(true);
     setScanSignal((s) => s + 1);
-    const cerebras = streamProvider("cerebras", (s) => setCText((t) => t + s), setCMetrics, setCStatus);
-    const gpu = streamProvider("gpu", (s) => setGText((t) => t + s), setGMetrics, setGStatus);
+    const cerebras = streamProvider("cerebras", (s) => setCText((t) => t + s), setCMetrics, setCStatus, setCThinking);
+    const gpu = streamProvider("gpu", (s) => setGText((t) => t + s), setGMetrics, setGStatus, setGThinking);
     await cerebras; // Cerebras finishes first -> verify immediately
     await runVerify();
     await gpu; // let the GPU side finish in the background
@@ -146,12 +151,12 @@ export default function Home() {
         <ProviderPanel
           accent kind="cerebras" title="Cerebras"
           subtitle="Wafer-Scale Inference" text={cText}
-          metrics={cMetrics} status={cStatus}
+          metrics={cMetrics} status={cStatus} thinking={cThinking}
         />
         <ProviderPanel
           kind="gpu" title="GPU Provider"
-          subtitle="Conventional GPU host · same Gemma model" text={gText}
-          metrics={gMetrics} status={gStatus}
+          subtitle="Conventional cloud host · same Gemma model" text={gText}
+          metrics={gMetrics} status={gStatus} thinking={gThinking}
         />
       </section>
 
@@ -269,10 +274,10 @@ function MetricStat({ label, value, unit, highlight }: { label: string; value: s
 }
 
 function ProviderPanel({
-  kind, title, subtitle, text, metrics, status, accent,
+  kind, title, subtitle, text, metrics, status, accent, thinking,
 }: {
   kind: "cerebras" | "gpu"; title: string; subtitle: string;
-  text: string; metrics: Metrics | null; status: Status; accent?: boolean;
+  text: string; metrics: Metrics | null; status: Status; accent?: boolean; thinking?: boolean;
 }) {
   const borderC = accent ? "border-[var(--cerebras)]/60" : "border-[var(--border)]";
   const glow = accent ? "shadow-[0_0_40px_-18px_var(--cerebras)]" : "";
@@ -308,6 +313,8 @@ function ProviderPanel({
       <div className="mono text-[13px] leading-relaxed text-[var(--foreground)]/90 mt-3 h-[230px] overflow-y-auto scroll-thin whitespace-pre-wrap">
         {text ? (
           <span className={status === "streaming" ? "caret" : ""}>{text}</span>
+        ) : thinking ? (
+          <span className="text-[var(--cerebras-2)] pulse">🧠 reasoning… <span className="text-[var(--muted)]">(model thinking before it answers)</span></span>
         ) : (
           <span className="text-[var(--muted)]">{status === "streaming" ? "…" : "Awaiting query."}</span>
         )}

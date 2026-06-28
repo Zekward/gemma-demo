@@ -79,6 +79,29 @@ function normalizeMessages(cfg: ProviderConfig, messages: ChatMessage[]): ChatMe
   return rest;
 }
 
+// Thinking models (e.g. Gemma 4 31B-IT on Google, which can't have thinking
+// disabled) wrap reasoning in <thought>...</thought> before the answer. We show
+// only the answer; the hidden reasoning still counts toward tokens/time, which
+// is precisely why such models are slow — an honest part of the comparison.
+function visibleOutput(raw: string): string {
+  const lo = raw.toLowerCase();
+  for (const close of ["</thought>", "</think>"]) {
+    const i = lo.indexOf(close);
+    if (i !== -1) return raw.slice(i + close.length);
+  }
+  // no closing tag yet: hide if we're inside / forming an opening reasoning tag
+  const head = lo.replace(/^\s+/, "");
+  if (
+    head.startsWith("<thought") ||
+    head.startsWith("<think") ||
+    "<thought>".startsWith(head.slice(0, 9)) ||
+    "<think>".startsWith(head.slice(0, 7))
+  ) {
+    return "";
+  }
+  return raw;
+}
+
 function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -86,6 +109,8 @@ function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStrea
       let ttftMs: number | null = null;
       let tokens = 0;
       let text = "";
+      let displayLen = 0; // chars of visible (post-reasoning) output already sent
+      let announcedThinking = false;
 
       const emitMetrics = (final = false) => {
         const elapsedMs = Date.now() - start;
@@ -108,7 +133,10 @@ function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStrea
             "Content-Type": "application/json",
             Authorization: `Bearer ${cfg.apiKey}`,
           },
-          body: JSON.stringify({ model: cfg.model, messages: normalizeMessages(cfg, messages), stream: true, temperature: 0.3, max_tokens: 700 }),
+          // Thinking models (Gemma 4 31B-IT) spend ~700 tokens reasoning before
+          // answering, so the budget must leave room for both the hidden thought
+          // and the visible verdict. Non-thinking hosts just stop early.
+          body: JSON.stringify({ model: cfg.model, messages: normalizeMessages(cfg, messages), stream: true, temperature: 0.3, max_tokens: 1500 }),
         });
 
         if (!res.ok || !res.body) {
@@ -139,9 +167,16 @@ function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStrea
               const delta: string = json.choices?.[0]?.delta?.content ?? "";
               if (delta) {
                 if (ttftMs === null) ttftMs = Date.now() - start;
-                text += delta;
+                text += delta; // raw, incl. hidden reasoning — counts toward tokens/throughput
                 tokens = approxTokens(text);
-                controller.enqueue(sse({ t: "token", v: delta }));
+                const visible = visibleOutput(text);
+                if (visible.length > displayLen) {
+                  controller.enqueue(sse({ t: "token", v: visible.slice(displayLen) }));
+                  displayLen = visible.length;
+                } else if (visible.length === 0 && !announcedThinking) {
+                  announcedThinking = true;
+                  controller.enqueue(sse({ t: "status", v: "thinking" }));
+                }
                 const now = Date.now();
                 if (now - lastMetric > 80) {
                   lastMetric = now;
