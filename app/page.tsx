@@ -421,7 +421,15 @@ function ProviderPanel({
         {text ? (
           <span className={status === "streaming" ? "caret" : ""}>{text}</span>
         ) : thinking ? (
-          <span className="text-[var(--cerebras-2)] pulse">🧠 reasoning… <span className="text-[var(--muted)]">(model thinking before it answers)</span></span>
+          <span className="inline-flex items-center gap-2 text-[var(--cerebras-2)]">
+            <span className="inline-flex gap-1">
+              <span className="dot h-1.5 w-1.5 rounded-full bg-current" />
+              <span className="dot h-1.5 w-1.5 rounded-full bg-current" style={{ animationDelay: "0.18s" }} />
+              <span className="dot h-1.5 w-1.5 rounded-full bg-current" style={{ animationDelay: "0.36s" }} />
+            </span>
+            <span className="text-xs uppercase tracking-wide">Reasoning</span>
+            <span className="text-[var(--muted)] text-xs">— model thinks before it answers</span>
+          </span>
         ) : (
           <span className="text-[var(--muted)]">{status === "streaming" ? "…" : "Awaiting query."}</span>
         )}

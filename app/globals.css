@@ -58,3 +58,16 @@ html, body {
 
 .scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
 .scroll-thin::-webkit-scrollbar-thumb { background: #2a3142; border-radius: 6px; }
+
+/* Designed "reasoning" indicator — three dots breathing in sequence, no emoji. */
+@keyframes dotPulse {
+  0%, 70%, 100% { opacity: 0.25; transform: translateY(0); }
+  35% { opacity: 1; transform: translateY(-1px); }
+}
+.dot { animation: dotPulse 1.25s ease-in-out infinite; }
+
+/* Respect users who ask for less motion: hold everything still. */
+@media (prefers-reduced-motion: reduce) {
+  .pulse, .dot, .pop-in { animation: none !important; }
+  .caret::after { animation: none !important; opacity: 1; }
+}

@@ -14,7 +14,7 @@ Two north stars:
 - [ ] Cumulative tokens-over-time sparkline per provider
 - [ ] Typography & spacing polish pass (less generic dark-theme)
 - [ ] Number formatting (thousands separators, monospaced tabular figures)
-- [ ] Accessibility: focus states, aria-live for streaming regions, reduced-motion
+- [ ] Accessibility: focus states, aria-live for streaming regions (reduced-motion done in cycle 3)
 - [ ] Empty/loading states refinement
 - [ ] Mobile/responsive tightening
 - [ ] Header: tighten the value prop, add a subtle AIQ/Cerebras lockup
@@ -27,6 +27,10 @@ Two north stars:
       request to both engines on page load (`lib/providers.ts:warmupProvider`); a green "engines
       warm · steady-state speed" badge appears under Run. Measured impact: Cerebras TTFT 4071ms→712ms,
       36→151 t/s, headline 3.6×→**11×** on a warm run. No-op + "simulated" label without keys.
+- [x] **Cycle 3 — Designed states (de-vibecode).** Replaced the `🧠 reasoning…` emoji with a
+      designed three-dot "Reasoning" indicator (`dotPulse` keyframe, staggered delays); added
+      `prefers-reduced-motion` support that holds pulse/dots/pop-in/caret still. Verified the
+      indicator renders (injected-markup screenshot) since the thinking state rarely triggers live.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.
