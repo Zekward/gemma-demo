@@ -38,6 +38,11 @@ Two north stars:
       Intelligence" text with a monogram lockup (rounded "AIQ" mark + wordmark + refined tagline),
       a structured "Analyst query" chip with divider, a cleaner CTA (dropped the ▶ glyph) with a
       `focus-visible` ring, and a header bottom-border for structure. Verified in browser.
+- [x] **Cycle 6 — "Formally-verified answer in Ns" banner.** The climax that fuses both
+      differentiators: a green ✓ banner (appears on verify-done) showing Cerebras answer-time +
+      Lean proof-time as one number, with "N/N facts proved by Lean's kernel" and either "GPU still
+      generating its first draft" or "GPU answered unverified in Xs". Verified in browser
+      (e.g. verified in 3.2s vs GPU unverified in 6.6s).
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

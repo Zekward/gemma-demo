@@ -184,6 +184,13 @@ export default function Home() {
         verifyState={verifyState} verifiedCount={verifiedCount} claimCount={claims.length}
       />
 
+      {verifyState === "done" && (
+        <VerifiedAnswerBanner
+          cMetrics={cMetrics} gMetrics={gMetrics} gStatus={gStatus}
+          leanInfo={leanInfo} verifiedCount={verifiedCount} claimCount={claims.length}
+        />
+      )}
+
       {/* SPLIT SCREEN */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <ProviderPanel
@@ -234,6 +241,50 @@ export default function Home() {
 }
 
 /* ---------- components ---------- */
+
+// The climax: fuses the two differentiators into one number. Cerebras's answer
+// time + Lean's proof time = a *formally-verified* answer delivered while the GPU
+// host is typically still drafting its first (unverified) paragraph.
+function VerifiedAnswerBanner({
+  cMetrics, gMetrics, gStatus, leanInfo, verifiedCount, claimCount,
+}: {
+  cMetrics: Metrics | null; gMetrics: Metrics | null; gStatus: Status;
+  leanInfo: { available: boolean; durationMs: number; version?: string } | null;
+  verifiedCount: number; claimCount: number;
+}) {
+  if (!cMetrics) return null;
+  const proved = !!leanInfo?.available;
+  const totalMs = cMetrics.elapsedMs + (proved ? leanInfo!.durationMs : 0);
+  const totalS = (totalMs / 1000).toFixed(1);
+  const gpuDone = gStatus === "done";
+  const gpuS = gMetrics ? (gMetrics.elapsedMs / 1000).toFixed(1) : null;
+
+  return (
+    <div className="pop-in mt-4 rounded-xl border border-[var(--good)]/40 bg-[var(--good)]/[0.06] px-4 py-3 flex items-center gap-3 shadow-[0_0_40px_-22px_var(--good)]">
+      <span aria-hidden className="grid place-items-center h-9 w-9 shrink-0 rounded-lg bg-[var(--good)]/15 text-[var(--good)] text-lg">✓</span>
+      <div className="min-w-0">
+        <div className="text-sm sm:text-base font-bold leading-tight">
+          {proved ? (
+            <>Formally-verified answer in <span className="mono text-[var(--good)]">{totalS}s</span></>
+          ) : (
+            <>Answer delivered in <span className="mono text-[var(--good)]">{(cMetrics.elapsedMs / 1000).toFixed(1)}s</span></>
+          )}
+        </div>
+        <p className="text-xs text-[var(--muted)] mt-0.5">
+          {proved && (
+            <span className="text-[var(--foreground)]/80">{verifiedCount}/{claimCount} numeric facts proved by Lean’s kernel</span>
+          )}
+          {proved && " · "}
+          {gpuDone ? (
+            <>GPU host answered <span className="text-[var(--foreground)]/70">unverified</span> in {gpuS}s</>
+          ) : (
+            <span className="text-[var(--cerebras-2)]">GPU host is still generating its first draft</span>
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // Overlays both providers' cumulative-token curves on a shared time axis. The
 // contrast is the whole point: Cerebras spikes near-vertical at the left while
