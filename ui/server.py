@@ -30,7 +30,8 @@ def apply_filter(f):
         if f.get("maturity") and n.get("maturity") != f["maturity"]: continue
         if f.get("cusip") and (not n.get("cusip") or f["cusip"].lower() not in str(n["cusip"]).lower()): continue
         if f.get("keyword"):
-            hay = _norm(n["issuer"] + " " + " ".join(n.get("features") or []) + " " + str(n.get("cusip") or ""))
+            hay = _norm(n["issuer"] + " " + " ".join(n.get("features") or []) + " " + str(n.get("cusip") or "")
+                        + " " + str(n.get("seniority") or "") + " notes bond debt " + str(n.get("form") or ""))
             toks = [t for t in (_norm(w) for w in str(f["keyword"]).split()) if len(t) > 1]
             if not all(t in hay for t in toks): continue
         out.append(n["id"])

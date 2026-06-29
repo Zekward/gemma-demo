@@ -11,7 +11,9 @@ PREFIX = "week1"
 nodes = load(f"nodes_{PREFIX}.jsonl"); edges = load(f"edges_{PREFIX}.jsonl")
 nlean = {r["id"]: r for r in load(f"nodes_lean_{PREFIX}.jsonl")}
 elean = {(r["src"], r["dst"]): r for r in load(f"edges_lean_{PREFIX}.jsonl")}
-short = lambda s: re.split(r"\s*\(", s)[0].strip()[:34]
+def short(s):
+    if "Space Exploration" in s: return "SpaceX"     # alias the IPO'd issuer to its common name
+    return re.split(r"\s*\(", s)[0].strip()[:34]
 
 out_nodes = []
 for n in nodes:
