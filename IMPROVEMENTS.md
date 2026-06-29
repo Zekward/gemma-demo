@@ -83,6 +83,12 @@ Two north stars:
       also sends, so the displayed params can't drift from reality. Caveats to confirm out-of-band:
       genuine model-checkpoint parity (`gemma-4-31b` vs `google/gemma-4-31B-it`) and serving
       precision are provider-controlled. Verified in browser.
+- [x] **Cycle 14 — GPU pending/elapsed indicator.** After cycle 12 the UI unlocks early, leaving
+      the GPU panel sitting on a bare "…" during its (real) 18s–2min wait. Replaced it with a live
+      "waiting for first token · N.Ns" counter; past 5s the GPU adds an honest note: "conventional
+      GPU hosts queue & cold-start — Cerebras already answered." Turns the dead wait into part of
+      the speed story. Verified: at 24s the GPU still had no first token while Cerebras was done
+      and 5/5 proved.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

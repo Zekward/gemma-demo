@@ -570,6 +570,34 @@ function MetricStat({ label, value, unit, highlight }: { label: string; value: s
   );
 }
 
+// Shown while a provider is streaming but hasn't emitted its first visible
+// token yet. For the GPU this is the long "5s of nothing" the eye notices —
+// so we count it up and, past a threshold, name the cause honestly. The dead
+// wait becomes part of the story rather than an unexplained hang.
+function PendingIndicator({ kind }: { kind: "cerebras" | "gpu" }) {
+  const [ms, setMs] = useState(0);
+  useEffect(() => {
+    const start = performance.now();
+    const id = setInterval(() => setMs(performance.now() - start), 200);
+    return () => clearInterval(id);
+  }, []);
+  const slow = kind === "gpu" && ms > 5000;
+  return (
+    <span className="inline-flex flex-col gap-1">
+      <span className="inline-flex items-center gap-2 text-[var(--muted)]">
+        <span className={`h-1.5 w-1.5 rounded-full ${kind === "cerebras" ? "bg-[var(--cerebras)]" : "bg-[var(--gpu)]"} pulse`} />
+        <span className="text-xs">waiting for first token</span>
+        <span className="mono text-xs tabular-nums">{(ms / 1000).toFixed(1)}s</span>
+      </span>
+      {slow && (
+        <span className="text-[11px] text-[var(--cerebras-2)]">
+          conventional GPU hosts queue &amp; cold-start — Cerebras already answered
+        </span>
+      )}
+    </span>
+  );
+}
+
 function ProviderPanel({
   kind, title, subtitle, text, metrics, status, accent, thinking,
 }: {
@@ -620,8 +648,10 @@ function ProviderPanel({
             <span className="text-xs uppercase tracking-wide">Reasoning</span>
             <span className="text-[var(--muted)] text-xs">— model thinks before it answers</span>
           </span>
+        ) : status === "streaming" ? (
+          <PendingIndicator kind={kind} />
         ) : (
-          <span className="text-[var(--muted)]">{status === "streaming" ? "…" : "Awaiting query."}</span>
+          <span className="text-[var(--muted)]">Awaiting query.</span>
         )}
       </div>
     </div>
