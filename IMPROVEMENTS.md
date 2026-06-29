@@ -89,6 +89,14 @@ Two north stars:
       GPU hosts queue & cold-start — Cerebras already answered." Turns the dead wait into part of
       the speed story. Verified: at 24s the GPU still had no first token while Cerebras was done
       and 5/5 proved.
+- [x] **Cycle 15 — End-to-end verification + wind-down (no feature).** Backlog exhausted of
+      genuinely valuable items, so rather than pad, ran a full E2E check at 1280px: all 14 cycles
+      render and work together — warm badge, Controlled A/B bar, throughput chart (round dot),
+      "Formally-verified answer in 2.9s · GPU still generating" banner, 5/5 proved, Cerebras
+      138ms / 475.6 t/s, GPU pending indicator counting (24s→83s, no first token). Console clean,
+      typecheck green. **Loop wound down again** — remaining backlog (number formatting, subjective
+      typography, empty-state tweaks) isn't worth shipping. Open follow-up: confirm model-checkpoint
+      parity + unify the displayed model name once the user provides the two provider model IDs.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.
