@@ -51,6 +51,11 @@ Two north stars:
       M of M facts proved by Lean." Gave the verified-answer banner `role="status"` and the
       throughput chart `role="img"` with a dynamic `aria-label` describing the speed gap. Verified
       the live region updates and is correctly sr-only.
+- [x] **Cycle 9 — Docs capstone + wind-down.** Updated README.md, SUBMISSION.md, and
+      VIDEO_SCRIPT.md to accurately describe the improved demo (race chart + `N×` readout,
+      warm-up for steady-state speed, the formally-verified-answer banner, accessibility), with
+      no overclaiming. Ran a full end-to-end check at 1280px (32× run, 5/5 proved, no console
+      errors). **Loop wound down here** — remaining backlog is low-value/subjective.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

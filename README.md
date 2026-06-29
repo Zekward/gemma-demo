@@ -13,14 +13,24 @@ attention span.
 ## What's in the demo
 
 - **Live side-by-side** — the same Gemma model streamed from Cerebras vs a conventional GPU
-  host, with live TTFT / tokens-per-second / end-to-end latency counters on each side.
+  host, with live TTFT / tokens-per-second / end-to-end latency counters on each side. Both
+  engines are **warmed on page load** so the first measured run reflects steady-state speed,
+  not cold-start latency.
+- **The race, made visceral** — a shared-axis chart overlays both engines' cumulative tokens
+  over time (Cerebras spikes near-vertical; the GPU curve crawls), next to a single
+  **`N×` throughput readout** and a live "Cerebras done · GPU still generating" status.
+- **Formally-verified-answer headline** — when the proof completes, one line fuses both
+  differentiators: *"Formally-verified answer in N s — M/M facts proved by Lean · GPU host
+  answered unverified in X s."*
 - **Formally verified facts** — each quantitative claim (yield differential, spread, coupon
   ordering, maturity ordering, duration gap) is compiled into a real Lean `theorem` proved by
   `decide` over integer basis-points, run through the actual `lean` binary. ✓/✗ is the
   kernel's verdict, not a model's opinion.
 - **Bond knowledge graph** — issuer / sector / similarity edges over the bond universe;
   "find the 6 nearest bonds by yield · spread · duration · rating".
-- **Runs on mobile** — responsive; open the same URL in a phone browser.
+- **Built like a product, not a demo** — responsive down to phone widths (metrics reflow to a
+  2×2 grid), with `prefers-reduced-motion` support, visible focus rings, and a polite
+  `aria-live` region that narrates milestones to screen readers.
 
 ## Run it
 
@@ -59,9 +69,11 @@ says so honestly instead of faking a ✓.
 
 ```
 app/
-  page.tsx              orchestrator: split-screen stream, metrics, verified facts, graph
+  page.tsx              orchestrator: race chart, split-screen stream, metrics, verified-answer
+                        banner, verified facts, graph, aria-live narration
   api/compare/route.ts  SSE stream from one provider, server-measured TTFT / tok-s / latency
   api/verify/route.ts   build claims from source data -> run Lean -> per-claim verdicts
+  api/warmup/route.ts   1-token ping to both engines on load -> steady-state first run
 lib/
   providers.ts          Cerebras + GPU (OpenAI-compatible) streaming + simulated fallback
   bonds.ts              data load, knowledge graph, cosine similarity

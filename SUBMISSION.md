@@ -21,7 +21,10 @@ unverifiable number into a trade ticket.
 A credit analyst asks *"compare SpaceX's two bonds — which is the better buy?"* and AIQ
 returns a complete, decision-ready answer:
 
-1. **A streamed analysis** of the carry-vs-duration trade-off from **Gemma on Cerebras**.
+1. **A streamed analysis** of the carry-vs-duration trade-off from **Gemma on Cerebras**, shown
+   side-by-side against a GPU host of the same model. A live chart races both engines' token
+   curves on a shared axis and distills the gap into a single **`N×` throughput** number
+   (engines are pre-warmed so the figure reflects steady-state, not cold-start, speed).
 2. **A bond knowledge graph** placing both notes in their sector/issuer neighborhood and
    surfacing the nearest comparable bonds by yield, spread, duration and rating.
 3. **Formally verified facts** — every quantitative claim (the 55 bps yield pickup, the
@@ -31,7 +34,9 @@ returns a complete, decision-ready answer:
 
 The unlock is speed: **verify-as-you-go is only interactive because Cerebras runs generation
 *and* formal verification inside a human attention span** — the Cerebras side finishes a
-graphed, proven answer before the GPU side finishes its first paragraph.
+graphed, proven answer before the GPU side finishes its first paragraph. The app says this in
+one line: *"Formally-verified answer in N s — M/M facts proved by Lean · GPU host answered
+unverified in X s."*
 
 ## How it maps to the judging criteria
 
@@ -52,7 +57,8 @@ graphed, proven answer before the GPU side finishes its first paragraph.
 ## Stack
 
 Next.js + TypeScript · Gemma via Cerebras (OpenAI-compatible streaming) · GPU comparison via
-any OpenAI-compatible host · Lean 4 formal verification · responsive UI (desktop + mobile).
+any OpenAI-compatible host · Lean 4 formal verification · responsive, accessible UI (mobile
+reflow, reduced-motion, focus-visible, aria-live screen-reader narration).
 
 ## Honesty notes
 
