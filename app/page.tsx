@@ -327,48 +327,80 @@ function VerifiedAnswerBanner({
   );
 }
 
-// Overlays both providers' cumulative-token curves on a shared time axis. The
-// contrast is the whole point: Cerebras spikes near-vertical at the left while
-// the GPU curve crawls along the bottom — fast inference made legible at a glance.
-function ThroughputChart({ cSamples, gSamples, idle }: { cSamples: Sample[]; gSamples: Sample[]; idle: boolean }) {
-  const W = 100, H = 40, padL = 1.5, padR = 1.5, padT = 3, padB = 2;
-  const maxMs = Math.max(1, ...cSamples.map((s) => s.ms), ...gSamples.map((s) => s.ms));
-  const maxTok = Math.max(1, ...cSamples.map((s) => s.tokens), ...gSamples.map((s) => s.tokens));
-  const xa = (W - padL - padR) / maxMs;
-  const ya = (H - padT - padB) / maxTok;
-  const X = (ms: number) => padL + ms * xa;
-  const Y = (tok: number) => H - padB - tok * ya;
-  const path = (s: Sample[]) => s.map((p, i) => `${i === 0 ? "M" : "L"}${X(p.ms).toFixed(2)} ${Y(p.tokens).toFixed(2)}`).join(" ");
+// Plots cumulative tokens against LOG time-since-each-engine's-first-token, so
+// both curves start at the left together and overlap — the chart compares
+// generation *rate*: Cerebras rockets to the ceiling within a fraction of a
+// second and holds (plateau), while the GPU host climbs over tens of seconds.
+// (The absolute head-start gap is told by the metrics, banner & pending timer.)
+type Pt = { e: number; tok: number };
+function ThroughputChart({ cSamples, gSamples, cStatus, gStatus, idle }: { cSamples: Sample[]; gSamples: Sample[]; cStatus: Status; gStatus: Status; idle: boolean }) {
+  const W = 100, H = 40, padL = 2, padR = 2, padT = 4, padB = 6;
 
-  const cLast = cSamples[cSamples.length - 1];
-  const gLast = gSamples[gSamples.length - 1];
+  // elapsed since the engine's own first token
+  const rel = (s: Sample[]): Pt[] => (s.length ? s.map((p) => ({ e: Math.max(0, p.ms - s[0].ms), tok: p.tokens })) : []);
+  const cR = rel(cSamples), gR = rel(gSamples);
+  const maxTok = Math.max(1, ...cR.map((p) => p.tok), ...gR.map((p) => p.tok));
 
+  const E0 = 10; // ms floor (0.01s) — first point clamps here so both start at the left
+  const dataMaxE = Math.max(1, ...cR.map((p) => p.e), ...gR.map((p) => p.e));
+  const E1 = Math.pow(10, Math.ceil(Math.log10(Math.max(dataMaxE, 1000))));
+  const l0 = Math.log10(E0), l1 = Math.log10(E1);
+  const yMax = maxTok * 1.12;
+
+  const X = (e: number) => padL + ((Math.log10(Math.min(E1, Math.max(E0, e))) - l0) / (l1 - l0)) * (W - padL - padR);
+  const Y = (tok: number) => H - padB - (tok / yMax) * (H - padT - padB);
+
+  // once an engine is done, hold its line flat to the right edge (it finished early)
+  const plateau = (r: Pt[], done: boolean): Pt[] => (done && r.length ? [...r, { e: E1, tok: r[r.length - 1].tok }] : r);
+  const cP = plateau(cR, cStatus === "done"), gP = plateau(gR, gStatus === "done");
+
+  const line = (r: Pt[]) => r.map((p, i) => `${i === 0 ? "M" : "L"}${X(p.e).toFixed(2)} ${Y(p.tok).toFixed(2)}`).join(" ");
+  const area = (r: Pt[]) => {
+    if (r.length < 2) return "";
+    const yb = (H - padB).toFixed(2);
+    return `${line(r)} L${X(r[r.length - 1].e).toFixed(2)} ${yb} L${X(r[0].e).toFixed(2)} ${yb} Z`;
+  };
+
+  const decades: number[] = [];
+  for (let d = l0; d <= l1 + 1e-9; d++) decades.push(Math.round(Math.pow(10, d)));
+  const tickLabel = (ms: number) => `${+(ms / 1000).toFixed(ms < 1000 ? 2 : 0)}s`;
+
+  const cLast = cR[cR.length - 1], gLast = gR[gR.length - 1];
   const ariaLabel = idle
-    ? "Throughput chart — run a comparison to plot cumulative tokens over time for both engines."
-    : `Cumulative tokens over time. Cerebras reached ${Math.round(maxTok)} tokens; the GPU host's curve climbs far more slowly over the same window.`;
+    ? "Throughput chart — run a comparison to plot cumulative tokens against a logarithmic time-since-first-token axis."
+    : `Cumulative tokens vs log time since each engine's first token. Cerebras reaches ${Math.round(maxTok)} tokens within a fraction of a second; the GPU host takes tens of seconds.`;
 
-  // The SVG is stretched to fill (preserveAspectRatio="none") so the time axis
-  // spans full width — but that would also squash text and round dots into
-  // ellipses, so those are rendered as crisp HTML overlays positioned by
-  // percentage (viewBox is 100 wide / H tall, so x → x% and y → y/H%).
-  const dot = (s: Sample, color: string, size: number) => ({
-    left: `${X(s.ms)}%`,
-    top: `${(Y(s.tokens) / H) * 100}%`,
+  // dots/labels are HTML overlays so they stay crisp & round under the stretched SVG.
+  const dot = (p: Pt, color: string, size: number) => ({
+    left: `${X(p.e)}%`, top: `${(Y(p.tok) / H) * 100}%`,
     width: size, height: size, background: color,
   });
 
   return (
     <div className="relative w-full h-full" role="img" aria-label={ariaLabel}>
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden>
-        {/* baseline */}
-        <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--border)" strokeWidth={0.3} vectorEffect="non-scaling-stroke" />
-        {gSamples.length > 1 && (
-          <path d={path(gSamples)} fill="none" stroke="var(--gpu)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        {decades.map((d) => (
+          <line key={`g${d}`} x1={X(d)} y1={padT} x2={X(d)} y2={H - padB} stroke="var(--border)" strokeWidth={0.4} strokeOpacity={0.7} vectorEffect="non-scaling-stroke" />
+        ))}
+        <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--border)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+        {gP.length > 1 && <path d={area(gP)} fill="var(--gpu)" opacity={0.12} />}
+        {cP.length > 1 && <path d={area(cP)} fill="var(--cerebras)" opacity={0.13} />}
+        {gP.length > 1 && (
+          <path d={line(gP)} fill="none" stroke="var(--gpu)" strokeWidth={1.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         )}
-        {cSamples.length > 1 && (
-          <path d={path(cSamples)} fill="none" stroke="var(--cerebras)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        {cP.length > 1 && (
+          <path d={line(cP)} fill="none" stroke="var(--cerebras)" strokeWidth={1.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
         )}
       </svg>
+
+      <div className="absolute inset-x-0 bottom-0 h-3 pointer-events-none">
+        {decades.map((d) => (
+          <span key={`l${d}`} className="absolute bottom-0 -translate-x-1/2 text-[9px] mono text-[var(--muted)]" style={{ left: `${X(d)}%` }}>
+            {tickLabel(d)}
+          </span>
+        ))}
+      </div>
+
       {idle ? (
         <div className="absolute inset-0 grid place-items-center text-[11px] text-[var(--muted)]">
           run a comparison to plot throughput
@@ -400,7 +432,7 @@ function RaceStrip({
     <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 mt-4">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 mb-3">
         <div className="flex items-center gap-4">
-          <span className="text-[11px] uppercase tracking-wide text-[var(--muted)] font-semibold">Cumulative tokens over time</span>
+          <span className="text-[11px] uppercase tracking-wide text-[var(--muted)] font-semibold">Cumulative tokens · time since first token <span className="normal-case opacity-70">(log)</span></span>
           <span className="flex items-center gap-3 text-[10px]">
             <span className="flex items-center gap-1 text-[var(--cerebras)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--cerebras)]" />Cerebras</span>
             <span className="flex items-center gap-1 text-[var(--muted)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--gpu)]" />GPU host</span>
@@ -435,7 +467,7 @@ function RaceStrip({
         </div>
       </div>
       <div className="h-[200px] sm:h-[260px]">
-        <ThroughputChart cSamples={cSamples} gSamples={gSamples} idle={idle} />
+        <ThroughputChart cSamples={cSamples} gSamples={gSamples} cStatus={cStatus} gStatus={gStatus} idle={idle} />
       </div>
     </div>
   );
