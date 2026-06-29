@@ -1,0 +1,38 @@
+{
+ "calls": 7832,
+ "errors": 0,
+ "elapsed_s": 8297.2,
+ "total_tokens": 11556069,
+ "completion_tokens": 2666797,
+ "latency_wall_s": {
+  "mean": 0.379,
+  "p50": 0.3586,
+  "p95": 0.5725,
+  "max": 11.191
+ },
+ "ttft_wall_s": {
+  "mean": 0.2,
+  "p50": 0.1754,
+  "p95": 0.3338,
+  "max": 10.953
+ },
+ "ttft_server_s_mean": 0.03314,
+ "out_tps_server": {
+  "mean": 1977.6,
+  "p50": 2009.6
+ },
+ "net_overhead_s_mean": 0.162,
+ "throughput": {
+  "tokens_per_min": 83566,
+  "calls_per_min": 56.6,
+  "effective_completion_tps": 321.4
+ },
+ "phase_seconds": {
+  "extract": 3786.8,
+  "compare": 4510.7,
+  "total": 8297.5
+ },
+ "docs_discovered": 2597,
+ "bond_nodes": 2498,
+ "edges": 5128
+}

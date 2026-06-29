@@ -1,0 +1,10 @@
+# secrets — NEVER commit
+.cerebras.env
+*.env
+# bulky raw SEC HTML (regenerable)
+data/raw/
+# python/os cruft + logs
+__pycache__/
+*.pyc
+.DS_Store
+*.log

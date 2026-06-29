@@ -1,0 +1,523 @@
+{
+ "nodes": [
+  {
+   "id": "ISS-SPCX",
+   "label": "Issuer",
+   "props": {
+    "name": "Space Exploration Technologies Corp",
+    "cik": "1181412",
+    "ticker": "SPCX"
+   }
+  },
+  {
+   "id": "8K-LAUNCH",
+   "label": "Filing",
+   "props": {
+    "doc_type": "8-K",
+    "stage": "launch",
+    "date": "2026-06-22",
+    "title": "Launch of senior notes",
+    "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026044489/spcx8-kxlaunchseniornotes.htm"
+   }
+  },
+  {
+   "id": "8K-PRICING",
+   "label": "Filing",
+   "props": {
+    "doc_type": "8-K",
+    "stage": "priced",
+    "date": "2026-06-23",
+    "title": "Pricing",
+    "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026044955/spcx-pricing8xk.htm"
+   }
+  },
+  {
+   "id": "8K-CLOSING",
+   "label": "Filing",
+   "props": {
+    "doc_type": "8-K",
+    "stage": "closed",
+    "date": "2026-06-26",
+    "title": "Closing + indenture",
+    "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026045763/spcx-closing8xkjune2026.htm"
+   }
+  },
+  {
+   "id": "IND-SPCX",
+   "label": "Indenture",
+   "props": {
+    "exhibit": "EX-4.1",
+    "trustee": "The Bank of New York Mellon Trust Company, N.A.",
+    "bytes": 925667,
+    "url": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026045763/exhibit41-closing8xkjune20.htm"
+   }
+  },
+  {
+   "id": "SPCX-2031",
+   "label": "Tranche",
+   "props": {
+    "series": "2031 Notes",
+    "coupon_pct": 5.35,
+    "maturity": 2031,
+    "principal_usd": 7000000000,
+    "seniority": "senior",
+    "cusip": null,
+    "cusip_status": "144A \u2014 not in EDGAR"
+   },
+   "lean": "def SPCX_2031 : Bond := { couponBp := 535, maturityYear := 2031, principalMM := 7000, senior := true }\ntheorem SPCX_2031_f0 : SPCX_2031.couponBp = 535 := by decide   -- coupon = 5.350%\ntheorem SPCX_2031_f1 : SPCX_2031.maturityYear > 2026 := by decide   -- matures (2031) after issue (2026)\ntheorem SPCX_2031_f2 : SPCX_2031.principalMM > 0 := by decide   -- principal 7000MM > 0\ntheorem SPCX_2031_f3 : SPCX_2031.senior = true := by decide   -- ranks senior",
+   "verified_facts": [
+    "coupon = 5.350%",
+    "matures (2031) after issue (2026)",
+    "principal 7000MM > 0",
+    "ranks senior"
+   ]
+  },
+  {
+   "id": "SPCX-2033",
+   "label": "Tranche",
+   "props": {
+    "series": "2033 Notes",
+    "coupon_pct": 5.65,
+    "maturity": 2033,
+    "principal_usd": 6000000000,
+    "seniority": "senior",
+    "cusip": null,
+    "cusip_status": "144A \u2014 not in EDGAR"
+   },
+   "lean": "def SPCX_2033 : Bond := { couponBp := 565, maturityYear := 2033, principalMM := 6000, senior := true }\ntheorem SPCX_2033_f0 : SPCX_2033.couponBp = 565 := by decide   -- coupon = 5.650%\ntheorem SPCX_2033_f1 : SPCX_2033.maturityYear > 2026 := by decide   -- matures (2033) after issue (2026)\ntheorem SPCX_2033_f2 : SPCX_2033.principalMM > 0 := by decide   -- principal 6000MM > 0\ntheorem SPCX_2033_f3 : SPCX_2033.senior = true := by decide   -- ranks senior",
+   "verified_facts": [
+    "coupon = 5.650%",
+    "matures (2033) after issue (2026)",
+    "principal 6000MM > 0",
+    "ranks senior"
+   ]
+  },
+  {
+   "id": "SPCX-2036",
+   "label": "Tranche",
+   "props": {
+    "series": "2036 Notes",
+    "coupon_pct": 5.875,
+    "maturity": 2036,
+    "principal_usd": 6000000000,
+    "seniority": "senior",
+    "cusip": null,
+    "cusip_status": "144A \u2014 not in EDGAR"
+   },
+   "lean": "def SPCX_2036 : Bond := { couponBp := 588, maturityYear := 2036, principalMM := 6000, senior := true }\ntheorem SPCX_2036_f0 : SPCX_2036.couponBp = 588 := by decide   -- coupon = 5.880%\ntheorem SPCX_2036_f1 : SPCX_2036.maturityYear > 2026 := by decide   -- matures (2036) after issue (2026)\ntheorem SPCX_2036_f2 : SPCX_2036.principalMM > 0 := by decide   -- principal 6000MM > 0\ntheorem SPCX_2036_f3 : SPCX_2036.senior = true := by decide   -- ranks senior",
+   "verified_facts": [
+    "coupon = 5.880%",
+    "matures (2036) after issue (2026)",
+    "principal 6000MM > 0",
+    "ranks senior"
+   ]
+  },
+  {
+   "id": "SPCX-2046",
+   "label": "Tranche",
+   "props": {
+    "series": "2046 Notes",
+    "coupon_pct": 6.6,
+    "maturity": 2046,
+    "principal_usd": 2500000000,
+    "seniority": "senior",
+    "cusip": null,
+    "cusip_status": "144A \u2014 not in EDGAR"
+   },
+   "lean": "def SPCX_2046 : Bond := { couponBp := 660, maturityYear := 2046, principalMM := 2500, senior := true }\ntheorem SPCX_2046_f0 : SPCX_2046.couponBp = 660 := by decide   -- coupon = 6.600%\ntheorem SPCX_2046_f1 : SPCX_2046.maturityYear > 2026 := by decide   -- matures (2046) after issue (2026)\ntheorem SPCX_2046_f2 : SPCX_2046.principalMM > 0 := by decide   -- principal 2500MM > 0\ntheorem SPCX_2046_f3 : SPCX_2046.senior = true := by decide   -- ranks senior",
+   "verified_facts": [
+    "coupon = 6.600%",
+    "matures (2046) after issue (2026)",
+    "principal 2500MM > 0",
+    "ranks senior"
+   ]
+  },
+  {
+   "id": "SPCX-2056",
+   "label": "Tranche",
+   "props": {
+    "series": "2056 Notes",
+    "coupon_pct": 6.65,
+    "maturity": 2056,
+    "principal_usd": 3500000000,
+    "seniority": "senior",
+    "cusip": null,
+    "cusip_status": "144A \u2014 not in EDGAR"
+   },
+   "lean": "def SPCX_2056 : Bond := { couponBp := 665, maturityYear := 2056, principalMM := 3500, senior := true }\ntheorem SPCX_2056_f0 : SPCX_2056.couponBp = 665 := by decide   -- coupon = 6.650%\ntheorem SPCX_2056_f1 : SPCX_2056.maturityYear > 2026 := by decide   -- matures (2056) after issue (2026)\ntheorem SPCX_2056_f2 : SPCX_2056.principalMM > 0 := by decide   -- principal 3500MM > 0\ntheorem SPCX_2056_f3 : SPCX_2056.senior = true := by decide   -- ranks senior",
+   "verified_facts": [
+    "coupon = 6.650%",
+    "matures (2056) after issue (2026)",
+    "principal 3500MM > 0",
+    "ranks senior"
+   ]
+  }
+ ],
+ "links": [
+  {
+   "src": "ISS-SPCX",
+   "dst": "SPCX-2031",
+   "type": "ISSUER_OF",
+   "props": {
+    "relationship": "issuer_of",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "issuer of the tranche"
+   }
+  },
+  {
+   "src": "IND-SPCX",
+   "dst": "SPCX-2031",
+   "type": "GOVERNS",
+   "props": {
+    "relationship": "governed_by",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "tranche governed by this indenture"
+   }
+  },
+  {
+   "src": "ISS-SPCX",
+   "dst": "SPCX-2033",
+   "type": "ISSUER_OF",
+   "props": {
+    "relationship": "issuer_of",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "issuer of the tranche"
+   }
+  },
+  {
+   "src": "IND-SPCX",
+   "dst": "SPCX-2033",
+   "type": "GOVERNS",
+   "props": {
+    "relationship": "governed_by",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "tranche governed by this indenture"
+   }
+  },
+  {
+   "src": "ISS-SPCX",
+   "dst": "SPCX-2036",
+   "type": "ISSUER_OF",
+   "props": {
+    "relationship": "issuer_of",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "issuer of the tranche"
+   }
+  },
+  {
+   "src": "IND-SPCX",
+   "dst": "SPCX-2036",
+   "type": "GOVERNS",
+   "props": {
+    "relationship": "governed_by",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "tranche governed by this indenture"
+   }
+  },
+  {
+   "src": "ISS-SPCX",
+   "dst": "SPCX-2046",
+   "type": "ISSUER_OF",
+   "props": {
+    "relationship": "issuer_of",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "issuer of the tranche"
+   }
+  },
+  {
+   "src": "IND-SPCX",
+   "dst": "SPCX-2046",
+   "type": "GOVERNS",
+   "props": {
+    "relationship": "governed_by",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "tranche governed by this indenture"
+   }
+  },
+  {
+   "src": "ISS-SPCX",
+   "dst": "SPCX-2056",
+   "type": "ISSUER_OF",
+   "props": {
+    "relationship": "issuer_of",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "issuer of the tranche"
+   }
+  },
+  {
+   "src": "IND-SPCX",
+   "dst": "SPCX-2056",
+   "type": "GOVERNS",
+   "props": {
+    "relationship": "governed_by",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.0,
+    "summary": "tranche governed by this indenture"
+   }
+  },
+  {
+   "src": "8K-CLOSING",
+   "dst": "IND-SPCX",
+   "type": "CONTAINS",
+   "props": {
+    "relationship": "contains",
+    "differences": [],
+    "identical_fields": [],
+    "materiality": 0.2,
+    "summary": "closing 8-K attaches the indenture (EX-4.1)"
+   }
+  },
+  {
+   "src": "8K-LAUNCH",
+   "dst": "8K-PRICING",
+   "type": "SUPERSEDES",
+   "props": {
+    "relationship": "supersedes",
+    "differences": [
+     {
+      "field": "coupons",
+      "a": "(none \u2014 intent only)",
+      "b": "5.350 / 5.650 / 5.875 / 6.600 / 6.650 %",
+      "why_it_matters": "the economics are now fixed"
+     },
+     {
+      "field": "tranche_sizes",
+      "a": "(none)",
+      "b": "$7.0 / $6.0 / $6.0 / $2.5 / $3.5 B",
+      "why_it_matters": "deal size & allocation set"
+     }
+    ],
+    "identical_fields": [
+     "issuer",
+     "deal",
+     "security_type=senior notes"
+    ],
+    "materiality": 0.9,
+    "summary": "Pricing 8-K turns the launch announcement into priced terms."
+   }
+  },
+  {
+   "src": "8K-PRICING",
+   "dst": "8K-CLOSING",
+   "type": "SUPERSEDES",
+   "props": {
+    "relationship": "supersedes",
+    "differences": [
+     {
+      "field": "indenture",
+      "a": "absent",
+      "b": "present (EX-4.1, 904 KB)",
+      "why_it_matters": "the binding legal contract now exists"
+     },
+     {
+      "field": "trustee",
+      "a": "(none)",
+      "b": "BNY Mellon Trust Co., N.A.",
+      "why_it_matters": "trustee identified"
+     },
+     {
+      "field": "redemption",
+      "a": "(none)",
+      "b": "make-whole + par call",
+      "why_it_matters": "call mechanics defined"
+     }
+    ],
+    "identical_fields": [
+     "coupons",
+     "tranche_sizes",
+     "issuer"
+    ],
+    "materiality": 0.85,
+    "summary": "Closing 8-K executes the contract: indenture, trustee, redemption terms appear."
+   }
+  },
+  {
+   "src": "SPCX-2031",
+   "dst": "SPCX-2033",
+   "type": "SIBLING_TRANCHE",
+   "props": {
+    "relationship": "sibling_tranche",
+    "differences": [
+     {
+      "field": "coupon",
+      "a": "5.350%",
+      "b": "5.650%",
+      "why_it_matters": "+30.0 bp for 2 yrs more duration"
+     },
+     {
+      "field": "maturity",
+      "a": 2031,
+      "b": 2033,
+      "why_it_matters": "further out the curve"
+     },
+     {
+      "field": "principal",
+      "a": "$7.0B",
+      "b": "$6.0B",
+      "why_it_matters": "different tranche size"
+     }
+    ],
+    "identical_fields": [
+     "issuer",
+     "indenture",
+     "seniority=senior",
+     "currency=USD"
+    ],
+    "materiality": 0.6,
+    "summary": "Same indenture & seniority; 2031->2033 steps up the maturity ladder."
+   },
+   "lean": "example : SPCX_2031.couponBp < SPCX_2033.couponBp := by decide   -- coupon ladder\nexample : SPCX_2031.maturityYear < SPCX_2033.maturityYear := by decide   -- maturity ordering\nexample : (SPCX_2031.senior = SPCX_2033.senior) = true := by decide   -- seniority match",
+   "verified_facts": [
+    "coupon ladder: SPCX_2031.couponBp < SPCX_2033.couponBp",
+    "maturity ordering: SPCX_2031.maturityYear < SPCX_2033.maturityYear",
+    "same seniority: True"
+   ]
+  },
+  {
+   "src": "SPCX-2033",
+   "dst": "SPCX-2036",
+   "type": "SIBLING_TRANCHE",
+   "props": {
+    "relationship": "sibling_tranche",
+    "differences": [
+     {
+      "field": "coupon",
+      "a": "5.650%",
+      "b": "5.875%",
+      "why_it_matters": "+22.5 bp for 3 yrs more duration"
+     },
+     {
+      "field": "maturity",
+      "a": 2033,
+      "b": 2036,
+      "why_it_matters": "further out the curve"
+     },
+     {
+      "field": "principal",
+      "a": "$6.0B",
+      "b": "$6.0B",
+      "why_it_matters": "different tranche size"
+     }
+    ],
+    "identical_fields": [
+     "issuer",
+     "indenture",
+     "seniority=senior",
+     "currency=USD"
+    ],
+    "materiality": 0.6,
+    "summary": "Same indenture & seniority; 2033->2036 steps up the maturity ladder."
+   },
+   "lean": "example : SPCX_2033.couponBp < SPCX_2036.couponBp := by decide   -- coupon ladder\nexample : SPCX_2033.maturityYear < SPCX_2036.maturityYear := by decide   -- maturity ordering\nexample : (SPCX_2033.senior = SPCX_2036.senior) = true := by decide   -- seniority match",
+   "verified_facts": [
+    "coupon ladder: SPCX_2033.couponBp < SPCX_2036.couponBp",
+    "maturity ordering: SPCX_2033.maturityYear < SPCX_2036.maturityYear",
+    "same seniority: True"
+   ]
+  },
+  {
+   "src": "SPCX-2036",
+   "dst": "SPCX-2046",
+   "type": "SIBLING_TRANCHE",
+   "props": {
+    "relationship": "sibling_tranche",
+    "differences": [
+     {
+      "field": "coupon",
+      "a": "5.875%",
+      "b": "6.600%",
+      "why_it_matters": "+72.5 bp for 10 yrs more duration"
+     },
+     {
+      "field": "maturity",
+      "a": 2036,
+      "b": 2046,
+      "why_it_matters": "further out the curve"
+     },
+     {
+      "field": "principal",
+      "a": "$6.0B",
+      "b": "$2.5B",
+      "why_it_matters": "different tranche size"
+     }
+    ],
+    "identical_fields": [
+     "issuer",
+     "indenture",
+     "seniority=senior",
+     "currency=USD"
+    ],
+    "materiality": 0.6,
+    "summary": "Same indenture & seniority; 2036->2046 steps up the maturity ladder."
+   },
+   "lean": "example : SPCX_2036.couponBp < SPCX_2046.couponBp := by decide   -- coupon ladder\nexample : SPCX_2036.maturityYear < SPCX_2046.maturityYear := by decide   -- maturity ordering\nexample : (SPCX_2036.senior = SPCX_2046.senior) = true := by decide   -- seniority match",
+   "verified_facts": [
+    "coupon ladder: SPCX_2036.couponBp < SPCX_2046.couponBp",
+    "maturity ordering: SPCX_2036.maturityYear < SPCX_2046.maturityYear",
+    "same seniority: True"
+   ]
+  },
+  {
+   "src": "SPCX-2046",
+   "dst": "SPCX-2056",
+   "type": "SIBLING_TRANCHE",
+   "props": {
+    "relationship": "sibling_tranche",
+    "differences": [
+     {
+      "field": "coupon",
+      "a": "6.600%",
+      "b": "6.650%",
+      "why_it_matters": "+5.0 bp for 10 yrs more duration"
+     },
+     {
+      "field": "maturity",
+      "a": 2046,
+      "b": 2056,
+      "why_it_matters": "further out the curve"
+     },
+     {
+      "field": "principal",
+      "a": "$2.5B",
+      "b": "$3.5B",
+      "why_it_matters": "different tranche size"
+     }
+    ],
+    "identical_fields": [
+     "issuer",
+     "indenture",
+     "seniority=senior",
+     "currency=USD"
+    ],
+    "materiality": 0.6,
+    "summary": "Same indenture & seniority; 2046->2056 steps up the maturity ladder."
+   },
+   "lean": "example : SPCX_2046.couponBp < SPCX_2056.couponBp := by decide   -- coupon ladder\nexample : SPCX_2046.maturityYear < SPCX_2056.maturityYear := by decide   -- maturity ordering\nexample : (SPCX_2046.senior = SPCX_2056.senior) = true := by decide   -- seniority match",
+   "verified_facts": [
+    "coupon ladder: SPCX_2046.couponBp < SPCX_2056.couponBp",
+    "maturity ordering: SPCX_2046.maturityYear < SPCX_2056.maturityYear",
+    "same seniority: True"
+   ]
+  }
+ ],
+ "_lean_compiled": true
+}

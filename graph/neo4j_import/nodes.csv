@@ -1,0 +1,11 @@
+:ID,:LABEL,props
+ISS-SPCX,Issuer,"{""name"": ""Space Exploration Technologies Corp"", ""cik"": ""1181412"", ""ticker"": ""SPCX""}"
+8K-LAUNCH,Filing,"{""doc_type"": ""8-K"", ""stage"": ""launch"", ""date"": ""2026-06-22"", ""title"": ""Launch of senior notes"", ""url"": ""https://www.sec.gov/Archives/edgar/data/1181412/000162828026044489/spcx8-kxlaunchseniornotes.htm""}"
+8K-PRICING,Filing,"{""doc_type"": ""8-K"", ""stage"": ""priced"", ""date"": ""2026-06-23"", ""title"": ""Pricing"", ""url"": ""https://www.sec.gov/Archives/edgar/data/1181412/000162828026044955/spcx-pricing8xk.htm""}"
+8K-CLOSING,Filing,"{""doc_type"": ""8-K"", ""stage"": ""closed"", ""date"": ""2026-06-26"", ""title"": ""Closing + indenture"", ""url"": ""https://www.sec.gov/Archives/edgar/data/1181412/000162828026045763/spcx-closing8xkjune2026.htm""}"
+IND-SPCX,Indenture,"{""exhibit"": ""EX-4.1"", ""trustee"": ""The Bank of New York Mellon Trust Company, N.A."", ""bytes"": 925667, ""url"": ""https://www.sec.gov/Archives/edgar/data/1181412/000162828026045763/exhibit41-closing8xkjune20.htm""}"
+SPCX-2031,Tranche,"{""series"": ""2031 Notes"", ""coupon_pct"": 5.35, ""maturity"": 2031, ""principal_usd"": 7000000000, ""seniority"": ""senior"", ""cusip"": null, ""cusip_status"": ""144A \u2014 not in EDGAR""}"
+SPCX-2033,Tranche,"{""series"": ""2033 Notes"", ""coupon_pct"": 5.65, ""maturity"": 2033, ""principal_usd"": 6000000000, ""seniority"": ""senior"", ""cusip"": null, ""cusip_status"": ""144A \u2014 not in EDGAR""}"
+SPCX-2036,Tranche,"{""series"": ""2036 Notes"", ""coupon_pct"": 5.875, ""maturity"": 2036, ""principal_usd"": 6000000000, ""seniority"": ""senior"", ""cusip"": null, ""cusip_status"": ""144A \u2014 not in EDGAR""}"
+SPCX-2046,Tranche,"{""series"": ""2046 Notes"", ""coupon_pct"": 6.6, ""maturity"": 2046, ""principal_usd"": 2500000000, ""seniority"": ""senior"", ""cusip"": null, ""cusip_status"": ""144A \u2014 not in EDGAR""}"
+SPCX-2056,Tranche,"{""series"": ""2056 Notes"", ""coupon_pct"": 6.65, ""maturity"": 2056, ""principal_usd"": 3500000000, ""seniority"": ""senior"", ""cusip"": null, ""cusip_status"": ""144A \u2014 not in EDGAR""}"
