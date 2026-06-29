@@ -216,13 +216,6 @@ export default function Home() {
 
       <Ingestion scanSignal={scanSignal} />
 
-      <RaceStrip
-        c={cMetrics} g={gMetrics}
-        cSamples={cSamples} gSamples={gSamples}
-        cStatus={cStatus} gStatus={gStatus}
-        verifyState={verifyState} verifiedCount={verifiedCount} claimCount={claims.length}
-      />
-
       {verifyState === "done" && (
         <VerifiedAnswerBanner
           cMetrics={cMetrics} gMetrics={gMetrics} gStatus={gStatus}
@@ -245,6 +238,13 @@ export default function Home() {
           metrics={gMetrics} status={gStatus} thinking={gThinking}
         />
       </section>
+
+      <RaceStrip
+        c={cMetrics} g={gMetrics}
+        cSamples={cSamples} gSamples={gSamples}
+        cStatus={cStatus} gStatus={gStatus}
+        verifyState={verifyState} verifiedCount={verifiedCount} claimCount={claims.length}
+      />
 
       {/* VERIFY + GRAPH */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
@@ -358,7 +358,7 @@ function ThroughputChart({ cSamples, gSamples, idle }: { cSamples: Sample[]; gSa
   });
 
   return (
-    <div className="relative w-full h-[68px]" role="img" aria-label={ariaLabel}>
+    <div className="relative w-full h-full" role="img" aria-label={ariaLabel}>
       <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden>
         {/* baseline */}
         <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--border)" strokeWidth={0.3} vectorEffect="non-scaling-stroke" />
@@ -397,41 +397,45 @@ function RaceStrip({
   const idle = cStatus === "idle" && gStatus === "idle";
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Cumulative tokens over time</span>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--panel)] p-4 mt-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 mb-3">
+        <div className="flex items-center gap-4">
+          <span className="text-[11px] uppercase tracking-wide text-[var(--muted)] font-semibold">Cumulative tokens over time</span>
           <span className="flex items-center gap-3 text-[10px]">
             <span className="flex items-center gap-1 text-[var(--cerebras)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--cerebras)]" />Cerebras</span>
             <span className="flex items-center gap-1 text-[var(--muted)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--gpu)]" />GPU host</span>
           </span>
         </div>
+        <div className="flex items-center gap-4">
+          {idle ? (
+            <span className="text-xs text-[var(--muted)]">Run a comparison to race the engines.</span>
+          ) : speedup ? (
+            <span className="flex items-baseline gap-1.5">
+              <span className="mono font-bold text-2xl text-[var(--cerebras)]">{speedup.toFixed(speedup >= 10 ? 0 : 1)}×</span>
+              <span className="text-[10px] uppercase tracking-wide text-[var(--muted)]">Cerebras throughput</span>
+            </span>
+          ) : (
+            <span className="text-xs text-[var(--muted)] pulse">measuring…</span>
+          )}
+          {!idle && (
+            <span className="text-[11px] mono text-right border-l border-[var(--border)] pl-4">
+              {cStatus === "done" && gStatus !== "done" && (
+                <span className="text-[var(--good)]">
+                  Cerebras done{verifyState === "done" ? ` · ${verifiedCount}/${claimCount} proved` : verifyState === "running" ? " · proving…" : ""}
+                  <br />
+                  <span className="text-[var(--muted)]">GPU still generating…</span>
+                </span>
+              )}
+              {cStatus === "done" && gStatus === "done" && (
+                <span className="text-[var(--muted)]">both complete · Cerebras led</span>
+              )}
+              {!(cStatus === "done") && <span className="text-[var(--muted)]">racing…</span>}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="h-[200px] sm:h-[260px]">
         <ThroughputChart cSamples={cSamples} gSamples={gSamples} idle={idle} />
-      </div>
-      <div className="flex items-center justify-center sm:border-l border-[var(--border)] sm:pl-5 min-w-[150px]">
-        {idle ? (
-          <span className="text-xs text-[var(--muted)]">Run a comparison to race the engines.</span>
-        ) : speedup ? (
-          <div className="text-center leading-none">
-            <div className="mono font-bold text-2xl text-[var(--cerebras)]">{speedup.toFixed(speedup >= 10 ? 0 : 1)}×</div>
-            <div className="text-[10px] uppercase tracking-wide text-[var(--muted)] mt-1">Cerebras throughput</div>
-          </div>
-        ) : (
-          <span className="text-xs text-[var(--muted)] pulse">measuring…</span>
-        )}
-      </div>
-      <div className="sm:border-l border-[var(--border)] sm:pl-5 text-[11px] mono text-right min-w-[140px]">
-        {cStatus === "done" && gStatus !== "done" && (
-          <span className="text-[var(--good)]">
-            Cerebras done{verifyState === "done" ? ` · ${verifiedCount}/${claimCount} proved` : verifyState === "running" ? " · proving…" : ""}
-            <br />
-            <span className="text-[var(--muted)]">GPU still generating…</span>
-          </span>
-        )}
-        {cStatus === "done" && gStatus === "done" && (
-          <span className="text-[var(--muted)]">both complete · Cerebras led</span>
-        )}
-        {!(cStatus === "done") && !idle && <span className="text-[var(--muted)]">racing…</span>}
       </div>
     </div>
   );

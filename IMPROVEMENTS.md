@@ -97,6 +97,13 @@ Two north stars:
       typecheck green. **Loop wound down again** — remaining backlog (number formatting, subjective
       typography, empty-state tweaks) isn't worth shipping. Open follow-up: confirm model-checkpoint
       parity + unify the displayed model name once the user provides the two provider model IDs.
+- [x] **Cycle 16 — Move + enlarge the throughput chart (user request).** Moved the "Cumulative
+      tokens over time" RaceStrip from above the provider panels to BELOW them, and restructured it
+      from a cramped horizontal row (chart `h-[68px]` sharing the row with the speedup/status) into
+      a full-width panel: a header row (label · legend · `N×` readout · status) above a big
+      full-width chart (`h-[200px] sm:h-[260px]`, ~4× taller). ThroughputChart now fills its parent
+      (`h-full`) so the height is parent-controlled. Verified: chart sits below panels (abs 961 vs
+      ~478) at 260px; renders both curves; typecheck green.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.
