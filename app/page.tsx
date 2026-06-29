@@ -166,8 +166,26 @@ export default function Home() {
 
   const verifiedCount = Object.values(verdicts).filter(Boolean).length;
 
+  // Announce meaningful milestones to screen readers — not every token (which
+  // would spam). A single polite live region narrates the demo's key beats.
+  const liveMessage = useMemo(() => {
+    if (verifyState === "done" && cMetrics) {
+      if (leanInfo?.available) {
+        const s = ((cMetrics.elapsedMs + leanInfo.durationMs) / 1000).toFixed(1);
+        return `Formally verified answer in ${s} seconds. ${verifiedCount} of ${claims.length} numeric facts proved by Lean.`;
+      }
+      return `Answer delivered in ${(cMetrics.elapsedMs / 1000).toFixed(1)} seconds.`;
+    }
+    if (cStatus === "done" && cMetrics) {
+      return `Cerebras answered in ${(cMetrics.elapsedMs / 1000).toFixed(1)} seconds at ${cMetrics.tps} tokens per second.`;
+    }
+    if (cStatus === "streaming" || gStatus === "streaming") return "Running comparison.";
+    return "";
+  }, [cStatus, gStatus, verifyState, cMetrics, leanInfo, verifiedCount, claims.length]);
+
   return (
     <main className="min-h-screen w-full px-4 sm:px-6 py-5 max-w-[1400px] mx-auto">
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveMessage}</p>
       <Header onRun={run} running={running} a={a} b={b} warm={warm} />
 
       <BondPickers
@@ -260,7 +278,7 @@ function VerifiedAnswerBanner({
   const gpuS = gMetrics ? (gMetrics.elapsedMs / 1000).toFixed(1) : null;
 
   return (
-    <div className="pop-in mt-4 rounded-xl border border-[var(--good)]/40 bg-[var(--good)]/[0.06] px-4 py-3 flex items-center gap-3 shadow-[0_0_40px_-22px_var(--good)]">
+    <div role="status" className="pop-in mt-4 rounded-xl border border-[var(--good)]/40 bg-[var(--good)]/[0.06] px-4 py-3 flex items-center gap-3 shadow-[0_0_40px_-22px_var(--good)]">
       <span aria-hidden className="grid place-items-center h-9 w-9 shrink-0 rounded-lg bg-[var(--good)]/15 text-[var(--good)] text-lg">✓</span>
       <div className="min-w-0">
         <div className="text-sm sm:text-base font-bold leading-tight">
@@ -302,8 +320,12 @@ function ThroughputChart({ cSamples, gSamples, idle }: { cSamples: Sample[]; gSa
   const cLast = cSamples[cSamples.length - 1];
   const gLast = gSamples[gSamples.length - 1];
 
+  const ariaLabel = idle
+    ? "Throughput chart — run a comparison to plot cumulative tokens over time for both engines."
+    : `Cumulative tokens over time. Cerebras reached ${Math.round(maxTok)} tokens; the GPU host's curve climbs far more slowly over the same window.`;
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[68px]" preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[68px]" preserveAspectRatio="none" role="img" aria-label={ariaLabel}>
       {/* baseline */}
       <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--border)" strokeWidth={0.3} vectorEffect="non-scaling-stroke" />
       {idle && (

@@ -13,7 +13,7 @@ Two north stars:
 ## Backlog (unordered ideas)
 - [ ] Typography & spacing polish pass (less generic dark-theme)
 - [ ] Number formatting (thousands separators, monospaced tabular figures)
-- [ ] Accessibility: focus states, aria-live for streaming regions (reduced-motion done in cycle 3)
+- [ ] (a11y largely covered: reduced-motion in cycle 3, focus-visible in cycle 5, aria-live in cycle 8)
 - [ ] Empty/loading states refinement
 
 ## Done
@@ -46,6 +46,11 @@ Two north stars:
       race strip, banner all wrap cleanly with no page overflow. Found + fixed a real bug — the
       provider panels' 4-up metric row clipped at 360px (308px in 294px); now a responsive
       2×2 grid on mobile, 4-up (`sm:grid-cols-4`) on larger. Verified both breakpoints.
+- [x] **Cycle 8 — Screen-reader accessibility (aria-live).** Added a visually-hidden polite live
+      region that narrates milestones (not every token): "Formally verified answer in N seconds.
+      M of M facts proved by Lean." Gave the verified-answer banner `role="status"` and the
+      throughput chart `role="img"` with a dynamic `aria-label` describing the speed gap. Verified
+      the live region updates and is correctly sr-only.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.
