@@ -66,6 +66,14 @@ Two north stars:
       node labels collided with edges (no halo) and top-row labels clipped off-canvas (y≈-4).
       Added a panel-colored text halo (`paintOrder: stroke`) so labels read cleanly over edges,
       and flip labels below their node when an above-position would clip the top edge. Verified.
+- [x] **Cycle 12 — Don't let the slow GPU lock the UI.** `run()` awaited the GPU stream before
+      `setRunning(false)`, so the Run button + selectors stayed disabled for the GPU's full
+      duration — and server logs showed real GPU `/api/compare` calls taking 18s–2.1min while
+      Cerebras finishes in ~300ms. Now the UI unlocks the instant the verified answer is ready
+      (~3.8s), and the GPU keeps streaming in the background (panel/chart/banner still update).
+      Added an `AbortController` so a fresh run cancels the prior in-flight GPU request, and
+      guarded the verify reveal timeouts against a superseded run. Verified: button re-enables
+      while GPU still streaming; typecheck + console clean.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

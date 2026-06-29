@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BONDS, getBond, buildGraph, similarBonds } from "@/lib/bonds";
 import KnowledgeGraph from "@/components/KnowledgeGraph";
 import Ingestion from "@/components/Ingestion";
@@ -74,6 +74,10 @@ export default function Home() {
   const graph = useMemo(() => buildGraph(focusIds), [aId, bId]);
   const similar = useMemo(() => similarBonds(aId, 6), [aId]);
 
+  // Tracks the in-flight comparison so a new run can cancel a slow GPU request
+  // still streaming from a previous run (the GPU side can take minutes).
+  const runAbort = useRef<AbortController | null>(null);
+
   const reset = () => {
     setCText(""); setGText(""); setCMetrics(null); setGMetrics(null);
     setCSamples([]); setGSamples([]);
@@ -89,46 +93,55 @@ export default function Home() {
     onMetrics: (m: Metrics) => void,
     setStatus: (s: Status) => void,
     setThinking: (b: boolean) => void,
+    signal: AbortSignal,
   ) {
     setStatus("streaming");
-    const res = await fetch("/api/compare", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, aId, bId }),
-    });
-    if (!res.body) { setStatus("error"); return; }
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      const chunks = buf.split("\n\n");
-      buf = chunks.pop() || "";
-      for (const chunk of chunks) {
-        const line = chunk.split("\n").find((l) => l.startsWith("data:"));
-        if (!line) continue;
-        try {
-          const ev = JSON.parse(line.slice(5).trim());
-          if (ev.t === "token") { onToken(ev.v); setThinking(false); }
-          else if (ev.t === "status") { if (ev.v === "thinking") setThinking(true); }
-          else if (ev.t === "metrics") onMetrics(ev.m);
-          else if (ev.t === "done") { onMetrics(ev.m); setStatus("done"); setThinking(false); }
-          else if (ev.t === "error") { onToken(`\n[error] ${ev.message}`); setStatus("error"); setThinking(false); }
-        } catch { /* skip */ }
+    try {
+      const res = await fetch("/api/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, aId, bId }),
+        signal,
+      });
+      if (!res.body) { setStatus("error"); return; }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const chunks = buf.split("\n\n");
+        buf = chunks.pop() || "";
+        for (const chunk of chunks) {
+          const line = chunk.split("\n").find((l) => l.startsWith("data:"));
+          if (!line) continue;
+          try {
+            const ev = JSON.parse(line.slice(5).trim());
+            if (ev.t === "token") { onToken(ev.v); setThinking(false); }
+            else if (ev.t === "status") { if (ev.v === "thinking") setThinking(true); }
+            else if (ev.t === "metrics") onMetrics(ev.m);
+            else if (ev.t === "done") { onMetrics(ev.m); setStatus("done"); setThinking(false); }
+            else if (ev.t === "error") { onToken(`\n[error] ${ev.message}`); setStatus("error"); setThinking(false); }
+          } catch { /* skip */ }
+        }
       }
+    } catch (e) {
+      // a superseded run was aborted on purpose — stay quiet
+      if ((e as Error).name !== "AbortError") setStatus("error");
     }
   }
 
-  async function runVerify() {
+  async function runVerify(signal: AbortSignal) {
     setVerifyState("running");
     const res = await fetch("/api/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ aId, bId }),
+      signal,
     });
     const data = await res.json();
+    if (signal.aborted) return;
     setClaims(data.claims);
     setLeanInfo({
       available: data.result.available,
@@ -141,27 +154,34 @@ export default function Home() {
     setRevealed(0);
     (data.claims as Claim[]).forEach((_, i) => {
       setTimeout(() => {
+        if (signal.aborted) return; // a newer run superseded this one
         setRevealed((r) => Math.max(r, i + 1));
         setVerdicts((prev) => ({ ...prev, [data.claims[i].id]: vmap[data.claims[i].id] }));
       }, 250 * (i + 1));
     });
-    setTimeout(() => setVerifyState("done"), 250 * (data.claims.length + 1));
-    setTimeout(() => setShowSimilar(true), 250 * (data.claims.length + 2));
+    setTimeout(() => { if (!signal.aborted) setVerifyState("done"); }, 250 * (data.claims.length + 1));
+    setTimeout(() => { if (!signal.aborted) setShowSimilar(true); }, 250 * (data.claims.length + 2));
   }
 
   async function run() {
     if (running) return;
+    runAbort.current?.abort(); // cancel any GPU stream still running from a prior comparison
+    const ac = new AbortController();
+    runAbort.current = ac;
     reset();
     setRunning(true);
     setScanSignal((s) => s + 1);
     const onC = (m: Metrics) => { setCMetrics(m); setCSamples((s) => appendSample(s, m)); };
     const onG = (m: Metrics) => { setGMetrics(m); setGSamples((s) => appendSample(s, m)); };
-    const cerebras = streamProvider("cerebras", (s) => setCText((t) => t + s), onC, setCStatus, setCThinking);
-    const gpu = streamProvider("gpu", (s) => setGText((t) => t + s), onG, setGStatus, setGThinking);
-    await cerebras; // Cerebras finishes first -> verify immediately
-    await runVerify();
-    await gpu; // let the GPU side finish in the background
+    const cerebras = streamProvider("cerebras", (s) => setCText((t) => t + s), onC, setCStatus, setCThinking, ac.signal);
+    const gpu = streamProvider("gpu", (s) => setGText((t) => t + s), onG, setGStatus, setGThinking, ac.signal);
+    await cerebras;        // Cerebras finishes first -> verify immediately
+    await runVerify(ac.signal);
+    // Unlock the UI as soon as the verified answer is ready — the GPU side can
+    // take many seconds to minutes, so let it keep streaming in the background
+    // (its panel, the throughput chart, and the banner update as it lands).
     setRunning(false);
+    await gpu;
   }
 
   const verifiedCount = Object.values(verdicts).filter(Boolean).length;
