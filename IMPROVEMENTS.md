@@ -11,7 +11,7 @@ Two north stars:
 2. **Reduce the "vibecoded" feel** — intentional, dense, terminal-grade UI; not generic AI dark theme.
 
 ## Backlog (unordered ideas)
-- [ ] Typography & spacing polish pass (less generic dark-theme)
+- [ ] Typography & spacing polish pass (less generic dark-theme; subjective — only if clearly better)
 - [ ] Number formatting (thousands separators, monospaced tabular figures)
 - [ ] (a11y largely covered: reduced-motion in cycle 3, focus-visible in cycle 5, aria-live in cycle 8)
 - [ ] Empty/loading states refinement
@@ -62,6 +62,10 @@ Two north stars:
       and the latest-value dots to crisp HTML overlays positioned by percentage; the SVG now carries
       only the (intentionally stretched) curves. Verified: idle text crisp, dots round (9×9),
       curves intact, "GPU still generating" banner variant captured.
+- [x] **Cycle 11 — Knowledge-graph legibility pass.** The graph was the least-polished surface:
+      node labels collided with edges (no halo) and top-row labels clipped off-canvas (y≈-4).
+      Added a panel-colored text halo (`paintOrder: stroke`) so labels read cleanly over edges,
+      and flip labels below their node when an above-position would clip the top edge. Verified.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

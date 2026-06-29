@@ -81,6 +81,11 @@ export default function KnowledgeGraph({
         const isHi = highlight.has(n.id);
         const color = SECTOR_COLORS[n.group % SECTOR_COLORS.length];
         const r = isFocus ? 13 : isHi ? 10 : 7;
+        // Place the label above the node, but flip it below when that would
+        // clip against the top edge — keeps every label fully on-canvas.
+        const aboveY = p.y - r - 5;
+        const labelBelow = aboveY < 12;
+        const labelY = labelBelow ? p.y + r + 13 : aboveY;
         return (
           <g key={n.id} className={isFocus ? "pulse" : undefined}>
             {(isFocus || isHi) && (
@@ -93,12 +98,16 @@ export default function KnowledgeGraph({
               strokeWidth={isFocus ? 2 : 1.5}
             />
             <text
-              x={p.x} y={p.y - r - 5}
+              x={p.x} y={labelY}
               textAnchor="middle"
               fontSize={isFocus ? 13 : 10.5}
               fontWeight={isFocus ? 700 : 500}
               fill={isFocus ? "#fff" : "#aeb6c6"}
               className="mono"
+              stroke="#0c0e14"
+              strokeWidth={3}
+              strokeLinejoin="round"
+              paintOrder="stroke"
             >
               {n.label}
             </text>
