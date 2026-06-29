@@ -56,6 +56,12 @@ Two north stars:
       warm-up for steady-state speed, the formally-verified-answer banner, accessibility), with
       no overclaiming. Ran a full end-to-end check at 1280px (32× run, 5/5 proved, no console
       errors). **Loop wound down here** — remaining backlog is low-value/subjective.
+- [x] **Cycle 10 — Throughput-chart rendering polish (loop restarted).** The chart stretches
+      its SVG (`preserveAspectRatio="none"`) to span the full time axis, which was also squashing
+      the idle placeholder text and warping the end-point dots into ellipses. Moved the placeholder
+      and the latest-value dots to crisp HTML overlays positioned by percentage; the SVG now carries
+      only the (intentionally stretched) curves. Verified: idle text crisp, dots round (9×9),
+      curves intact, "GPU still generating" banner variant captured.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

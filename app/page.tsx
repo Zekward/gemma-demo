@@ -324,24 +324,39 @@ function ThroughputChart({ cSamples, gSamples, idle }: { cSamples: Sample[]; gSa
     ? "Throughput chart — run a comparison to plot cumulative tokens over time for both engines."
     : `Cumulative tokens over time. Cerebras reached ${Math.round(maxTok)} tokens; the GPU host's curve climbs far more slowly over the same window.`;
 
+  // The SVG is stretched to fill (preserveAspectRatio="none") so the time axis
+  // spans full width — but that would also squash text and round dots into
+  // ellipses, so those are rendered as crisp HTML overlays positioned by
+  // percentage (viewBox is 100 wide / H tall, so x → x% and y → y/H%).
+  const dot = (s: Sample, color: string, size: number) => ({
+    left: `${X(s.ms)}%`,
+    top: `${(Y(s.tokens) / H) * 100}%`,
+    width: size, height: size, background: color,
+  });
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[68px]" preserveAspectRatio="none" role="img" aria-label={ariaLabel}>
-      {/* baseline */}
-      <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--border)" strokeWidth={0.3} vectorEffect="non-scaling-stroke" />
-      {idle && (
-        <text x={W / 2} y={H / 2} textAnchor="middle" fontSize={3} fill="var(--muted)">
+    <div className="relative w-full h-[68px]" role="img" aria-label={ariaLabel}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden>
+        {/* baseline */}
+        <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke="var(--border)" strokeWidth={0.3} vectorEffect="non-scaling-stroke" />
+        {gSamples.length > 1 && (
+          <path d={path(gSamples)} fill="none" stroke="var(--gpu)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        )}
+        {cSamples.length > 1 && (
+          <path d={path(cSamples)} fill="none" stroke="var(--cerebras)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        )}
+      </svg>
+      {idle ? (
+        <div className="absolute inset-0 grid place-items-center text-[11px] text-[var(--muted)]">
           run a comparison to plot throughput
-        </text>
+        </div>
+      ) : (
+        <>
+          {gLast && <span className="absolute rounded-full -translate-x-1/2 -translate-y-1/2" style={dot(gLast, "var(--gpu)", 7)} />}
+          {cLast && <span className="absolute rounded-full -translate-x-1/2 -translate-y-1/2 shadow-[0_0_8px_-1px_var(--cerebras)]" style={dot(cLast, "var(--cerebras)", 9)} />}
+        </>
       )}
-      {gSamples.length > 1 && (
-        <path d={path(gSamples)} fill="none" stroke="var(--gpu)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-      )}
-      {cSamples.length > 1 && (
-        <path d={path(cSamples)} fill="none" stroke="var(--cerebras)" strokeWidth={1.4} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-      )}
-      {gLast && <circle cx={X(gLast.ms)} cy={Y(gLast.tokens)} r={0.9} fill="var(--gpu)" vectorEffect="non-scaling-stroke" />}
-      {cLast && <circle cx={X(cLast.ms)} cy={Y(cLast.tokens)} r={1.1} fill="var(--cerebras)" vectorEffect="non-scaling-stroke" />}
-    </svg>
+    </div>
   );
 }
 
