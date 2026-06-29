@@ -8,3 +8,8 @@ __pycache__/
 *.pyc
 .DS_Store
 *.log
+
+# compiled binaries
+kernels/bench
+*.o
+*.out
