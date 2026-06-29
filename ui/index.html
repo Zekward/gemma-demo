@@ -42,13 +42,20 @@
   .agentc{border:1px solid var(--bd);border-radius:8px;padding:8px 10px;background:#fff;cursor:pointer}
   .agentc:hover{border-color:var(--acc)}
   .agentc .ah{font-size:12px;margin-bottom:5px}
-  .agentc .ab{font-size:12.5px;line-height:1.5;color:var(--ink)}
+  .agentc .ab{font-size:12.5px;line-height:1.5;color:var(--ink);white-space:pre-wrap}
+  #effortbar{display:flex;align-items:center;gap:8px;padding:5px 16px;border-top:1px solid var(--bd);font-size:12px;color:var(--mut)}
+  #effortbar .seg{display:inline-flex;border:1px solid var(--bd);border-radius:7px;overflow:hidden}
+  #effortbar .seg button{border:0;border-right:1px solid var(--bd);background:#fff;padding:3px 11px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink)}
+  #effortbar .seg button:last-child{border-right:0}
+  #effortbar .seg button.on{background:var(--acc);color:#fff}
+  #effortbar .seg button[data-e=nuclear].on{background:#c0392b}
 </style></head><body>
 <div id="app">
   <header><b>bondsec</b> <span id="stat">loading…</span> <span style="margin-left:auto" class="muted">Gemma-4 on Cerebras · SEC EDGAR</span></header>
   <section id="chat">
     <div id="msgs"></div>
-    <div id="inbar"><input id="q" placeholder='Ask: "JPMorgan autocallables linked to the S&P 500", "fixed-rate bonds over 6%", "Goldman notes due 2030"…' autocomplete="off">
+    <div id="effortbar"><span class="muted">/parallel agents effort</span><span class="seg"><button data-e="small">small</button><button data-e="mid" class="on">mid</button><button data-e="high">high</button><button data-e="nuclear">nuclear</button></span><span class="muted" style="margin-left:auto">nuclear → full filings + 👁 Gemma vision</span></div>
+    <div id="inbar"><input id="q" placeholder='Search bonds, or type "/parallel agents" to research the focused set…' autocomplete="off">
       <button id="send">Search</button></div>
   </section>
   <section id="graph"><canvas id="cv"></canvas>
@@ -166,17 +173,21 @@ async function run(){const q=document.getElementById('q').value.trim();if(!q)ret
     t.innerHTML=`<div class="bub" style="background:#fff;border:0;padding:0">${toolCard(tc.name,tc.args,tc.result)}<div style="margin-top:6px">${esc(r.answer)} — <b>${r.count}</b> filings highlighted.</div></div>`;
     hl=new Set(r.matched_ids);computePeers();sel=null;focusHl();renderInsp();
   }catch(e){t.innerHTML=`<div class="bub">error: ${esc(e.message)}</div>`;}}
+let effort='mid';const CAP={small:3,mid:6,high:10,nuclear:16};
 async function runParallel(q){
-  msg('me',`<span class="bub">${esc(q)}</span>`);
   const rest=q.replace(/^\/parallel(\s+agents)?/i,'').trim();
-  let ids=[...hl].slice(0,6);
+  msg('me',`<span class="bub">${esc(q)} <span class="muted">· ${effort}</span></span>`);
+  let ids=[...hl];
   if(rest){const r=await(await fetch('/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:rest})})).json();
-    hl=new Set(r.matched_ids);computePeers();sel=null;focusHl();renderInsp();ids=r.matched_ids.slice(0,6);}
-  if(!ids.length){msg('assistant',`<div class="bub">Search for bonds first, or add a query — e.g. <code>/parallel agents Goldman notes due 2030</code> — and I'll spin up one Gemma-4 agent per bond.</div>`);return;}
-  const cells=ids.map((id,i)=>{const n=byId[id];return `<div class="agentc" onclick="byId['${id}']&&selNode(byId['${id}'])"><div class="ah">🤖 <b>agent ${i+1}</b> · ${esc(n.issuer)} <span class="muted">${esc(n.form)}${n.coupon!=null?' · '+n.coupon+'%':''}${n.maturity?' · '+n.maturity:''}</span></div><div class="ab muted" id="ab${i}">researching on Cerebras…</div></div>`;}).join('');
-  const turn=msg('assistant',`<div class="bub" style="background:#fff;border:0;padding:0;max-width:100%;width:100%"><div style="margin-bottom:6px">🔧 <span class="tag">parallel_agents</span> <span class="muted">— ${ids.length} Gemma-4 agents researching in parallel on Cerebras</span></div><div class="agents">${cells}</div></div>`);
-  try{const r=await(await fetch('/api/parallel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})})).json();
-    (r.agents||[]).forEach(a=>{const i=ids.indexOf(a.id);const el=turn.querySelector('#ab'+i);if(el){el.classList.remove('muted');el.textContent=a.research;}});
+    hl=new Set(r.matched_ids);computePeers();sel=null;focusHl();renderInsp();ids=r.matched_ids;}
+  ids=ids.slice(0,CAP[effort]);
+  if(!ids.length){msg('assistant',`<div class="bub">Search for bonds first, or add a query — e.g. <code>/parallel agents Goldman notes due 2030</code> — and I'll spin up Gemma-4 agents (one per bond).</div>`);return;}
+  const nuke=effort==='nuclear';
+  const cells=ids.map((id,i)=>{const n=byId[id];return `<div class="agentc" onclick="byId['${id}']&&selNode(byId['${id}'])"><div class="ah">🤖 <b>agent ${i+1}</b> · ${esc(n.issuer)} <span class="muted">${esc(n.form)}${n.coupon!=null?' · '+n.coupon+'%':''}${n.maturity?' · '+n.maturity:''}</span></div><div class="ab muted" id="ab${i}">${nuke?'rendering filing + 👁 vision…':'researching…'}</div></div>`;}).join('');
+  const turn=msg('assistant',`<div class="bub" style="background:#fff;border:0;padding:0;max-width:100%;width:100%"><div style="margin-bottom:6px">🔧 <span class="tag">parallel_agents</span> <span class="muted">— ${ids.length} Gemma-4 agents · <b>${effort}</b>${nuke?' · 👁 vision on original filings · can take a few minutes':' · parallel on Cerebras'}</span></div><div class="agents">${cells}</div><div id="synth"></div></div>`);
+  try{const r=await(await fetch('/api/parallel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids,effort})})).json();
+    (r.agents||[]).forEach(a=>{const i=ids.indexOf(a.id);const el=turn.querySelector('#ab'+i);if(el){el.classList.remove('muted');el.textContent=a.research+(a.vision?'  👁':'');}});
+    if(r.synthesis){turn.querySelector('#synth').innerHTML=`<div class="agentc" style="margin-top:8px;cursor:default;border-color:var(--acc)"><div class="ah">🧠 <b>relationship intricacies</b> <span class="muted">— synthesis across ${ids.length} bonds${nuke?' · 👁 vision':''}</span></div><div class="ab">${esc(r.synthesis)}</div></div>`;}
   }catch(e){turn.querySelectorAll('.ab').forEach(el=>el.textContent='agent error');}}
 function computePeers(){peers=new Set();if(!hl.size)return;const cand=[];for(const e of EDGES){const ain=hl.has(e.src),bin=hl.has(e.dst);if(ain!==bin)cand.push([e,ain?e.dst:e.src]);}
   cand.sort((x,y)=>((y[0].rel==='cross_issuer_comparable')-(x[0].rel==='cross_issuer_comparable'))||((y[0].mat||0)-(x[0].mat||0)));
@@ -184,4 +195,5 @@ function computePeers(){peers=new Set();if(!hl.size)return;const cand=[];for(con
 function focusHl(){if(!hl.size){draw();return;}userMoved=true;let a=1e9,b=1e9,c=-1e9,d=-1e9;for(const id of [...hl,...peers]){const n=byId[id];if(!n)continue;a=Math.min(a,n.x);b=Math.min(b,n.y);c=Math.max(c,n.x);d=Math.max(d,n.y);}
   if(a>c){draw();return;}const W=cv.width,H=cv.height,bw=(c-a)||200,bh=(d-b)||200;view.s=Math.min(W/bw,H/bh,3)*0.8;view.x=W/2-(a+c)/2*view.s;view.y=H/2-(b+d)/2*view.s;draw();}
 document.getElementById('send').onclick=run;document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+document.querySelectorAll('#effortbar .seg button').forEach(b=>b.onclick=()=>{effort=b.dataset.e;document.querySelectorAll('#effortbar .seg button').forEach(x=>x.classList.toggle('on',x===b));});
 </script></body></html>
