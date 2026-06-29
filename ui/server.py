@@ -18,6 +18,20 @@ SYS = ("You are search_db, translating a natural-language query about US bond fi
 import re as _re
 def _norm(s): return _re.sub(r"[^a-z0-9]", "", s.lower())
 
+RESEARCH_SYS = ("You are a fixed-income research agent. Given ONE bond's extracted facts, write a tight 3-4 sentence brief: "
+                "what the instrument is, its structure/economics, the single most important risk, and what makes it distinct vs "
+                "typical peers. Ground strictly in the facts; never invent numbers. Plain prose, no preamble, no markdown.")
+
+def research_one(n):
+    facts = {k: n.get(k) for k in ("issuer", "form", "sector", "coupon", "maturity", "principal",
+                                   "seniority", "cusip", "is_144a", "features")}
+    try:
+        txt, _ = G.chat([{"role": "system", "content": RESEARCH_SYS}, {"role": "user", "content": json.dumps(facts)}], max_tokens=320)
+    except Exception as e:
+        txt = f"(agent error: {str(e)[:80]})"
+    return {"id": n["id"], "issuer": n["issuer"], "form": n["form"], "coupon": n.get("coupon"),
+            "maturity": n.get("maturity"), "research": txt.strip()}
+
 def apply_filter(f):
     out = []
     for n in NODES:
@@ -54,10 +68,14 @@ class H(BaseHTTPRequestHandler):
         else:
             self._send(404, b"not found", "text/plain")
     def do_POST(self):
-        if self.path != "/api/query":
-            return self._send(404, b"no", "text/plain")
         n = int(self.headers.get("Content-Length", 0))
-        q = json.loads(self.rfile.read(n) or b"{}").get("q", "").strip()
+        body = json.loads(self.rfile.read(n) or b"{}")
+        if self.path == "/api/query": return self._query(body)
+        if self.path == "/api/parallel": return self._parallel(body)
+        return self._send(404, b"no", "text/plain")
+
+    def _query(self, body):
+        q = body.get("q", "").strip()
         if not q: return self._send(400, json.dumps({"error": "empty"}))
         try:
             f = G.chat_json([{"role": "system", "content": SYS}, {"role": "user", "content": q}], max_tokens=300) or {}
@@ -65,11 +83,18 @@ class H(BaseHTTPRequestHandler):
             return self._send(500, json.dumps({"error": str(e)[:200]}))
         ids = apply_filter(f)
         answer = f.pop("answer", None) or f"Found {len(ids)} matching filings."
-        sample = [{"id": i, **next(x for x in NODES if x["id"] == i)} for i in ids[:6]]
-        sample = [{"issuer": s["issuer"], "form": s["form"], "coupon": s.get("coupon"), "maturity": s.get("maturity")} for s in sample]
+        sample = [{"issuer": x["issuer"], "form": x["form"], "coupon": x.get("coupon"), "maturity": x.get("maturity")}
+                  for x in (next(y for y in NODES if y["id"] == i) for i in ids[:6])]
         self._send(200, json.dumps({"query": q,
             "tool_calls": [{"name": "search_db", "args": f, "result": {"count": len(ids), "sample": sample}}],
             "matched_ids": ids, "count": len(ids), "answer": answer}))
+
+    def _parallel(self, body):
+        ids = (body.get("ids") or [])[:8]
+        nodes = [n for n in (next((x for x in NODES if x["id"] == i), None) for i in ids) if n]
+        if not nodes: return self._send(400, json.dumps({"error": "no bonds"}))
+        agents = G.pmap(research_one, nodes, workers=8)
+        self._send(200, json.dumps({"agents": agents, "model": G.MODEL}))
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
