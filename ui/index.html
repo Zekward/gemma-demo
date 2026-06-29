@@ -91,18 +91,22 @@ function _draw(){
   ctx.fillStyle='#333';ctx.font=`${11*dpr}px -apple-system,sans-serif`;
   const lab=hl.size&&hl.size<=40?[...hl]:(sel?[sel.id]:[]);
   for(const id of lab){const n=byId[id];if(!n)continue;const[x,y]=S(n);ctx.fillText(n.issuer,x+7*dpr,y+4*dpr);}
+  if(hover){ctx.globalAlpha=1;if(hover.t==='e'){const a=byId[hover.o.src],b=byId[hover.o.dst];const[x1,y1]=S(a),[x2,y2]=S(b);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=EC[hover.o.rel]||'#666';ctx.lineWidth=3.5*dpr;ctx.stroke();ctx.lineWidth=1*dpr;const mx=(x1+x2)/2,my=(y1+y2)/2;ctx.fillStyle='#111';ctx.fillText(hover.o.rel||'',mx+6*dpr,my-4*dpr);}else{const[x,y]=S(hover.o);ctx.beginPath();ctx.arc(x,y,(4+Math.min(hover.o.deg,14)*0.45)*dpr+2,0,7);ctx.strokeStyle='#111';ctx.lineWidth=2*dpr;ctx.stroke();ctx.lineWidth=1*dpr;}}
 }
 // ---- interaction ----
-let drag=null;
+let drag=null,hover=null;
 cv.addEventListener('mousedown',e=>{drag={x:e.offsetX,y:e.offsetY,vx:view.x,vy:view.y,moved:0};});
 addEventListener('mousemove',e=>{if(!drag)return;userMoved=true;const dx=(e.offsetX-drag.x)*dpr,dy=(e.offsetY-drag.y)*dpr;drag.moved+=Math.abs(dx)+Math.abs(dy);view.x=drag.vx+dx;view.y=drag.vy+dy;draw();});
 addEventListener('mouseup',e=>{if(drag&&drag.moved<4*dpr)pick(drag.x,drag.y);drag=null;});
+cv.addEventListener('mousemove',e=>{if(drag)return;const h=hoverPick(e.offsetX*dpr,e.offsetY*dpr);if((h&&h.key)!==(hover&&hover.key)){hover=h;cv.style.cursor=h?'pointer':'';draw();}});
+cv.addEventListener('mouseleave',()=>{if(hover){hover=null;cv.style.cursor='';draw();}});
+function hoverPick(px,py){let bn=null,bd=12*dpr;for(const n of NODES){if(hl.size&&!hl.has(n.id))continue;const[x,y]=S(n);const d=Math.hypot(x-px,y-py);if(d<bd){bd=d;bn=n;}}if(bn)return{t:'n',o:bn,key:'n'+bn.id};let be=null,bed=10*dpr;for(const e of EDGES){const a=byId[e.src],b=byId[e.dst];if(!a||!b)continue;if(hl.size&&!(hl.has(e.src)||hl.has(e.dst)))continue;const[x1,y1]=S(a),[x2,y2]=S(b),d=segDist(px,py,x1,y1,x2,y2);if(d<bed){bed=d;be=e;}}if(be)return{t:'e',o:be,key:'e'+be.src+be.dst};return null;}
 cv.addEventListener('wheel',e=>{e.preventDefault();userMoved=true;const f=e.deltaY<0?1.12:1/1.12;const mx=e.offsetX*dpr,my=e.offsetY*dpr;
   view.x=mx-(mx-view.x)*f;view.y=my-(my-view.y)*f;view.s*=f;draw();},{passive:false});
 function pick(px,py){px*=dpr;py*=dpr;let best=null,bd=14*dpr;
   for(const n of NODES){if(hl.size&&!hl.has(n.id))continue;const[x,y]=S(n);const d=Math.hypot(x-px,y-py);if(d<bd){bd=d;best=n;}}
   if(best){selNode(best);return;}
-  let be=null,bed=6*dpr;for(const e of EDGES){const a=byId[e.src],b=byId[e.dst];if(!a||!b)continue;
+  let be=null,bed=10*dpr;for(const e of EDGES){const a=byId[e.src],b=byId[e.dst];if(!a||!b)continue;
     if(hl.size&&!(hl.has(e.src)||hl.has(e.dst)))continue;
     const[x1,y1]=S(a),[x2,y2]=S(b),d=segDist(px,py,x1,y1,x2,y2);if(d<bed){bed=d;be=e;}}
   if(be)selEdge(be);}
