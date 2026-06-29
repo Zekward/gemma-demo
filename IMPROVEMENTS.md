@@ -74,6 +74,15 @@ Two north stars:
       Added an `AbortController` so a fresh run cancels the prior in-flight GPU request, and
       guarded the verify reveal timeouts against a superseded run. Verified: button re-enables
       while GPU still streaming; typecheck + console clean.
+- [x] **Cycle 13 — "Controlled A/B" bar (honest, demonstrable comparison).** Audited what's held
+      constant: prompt (`buildMessages`), sampling (temp 0.3 / max 1500 / stream — same code path),
+      server-side timing, warm-up, input bonds — all identical for both engines. Surfaced it as a
+      bar between the chart and panels: "only the inference engine differs: ✓ same Gemma model ✓
+      same prompt ✓ temperature 0.3 ✓ max 1,500 tokens ✓ both pre-warmed ✓ identical server-side
+      timing." Sampling values come from a new shared `lib/sampling.ts` (`SAMPLING`) that the API
+      also sends, so the displayed params can't drift from reality. Caveats to confirm out-of-band:
+      genuine model-checkpoint parity (`gemma-4-31b` vs `google/gemma-4-31B-it`) and serving
+      precision are provider-controlled. Verified in browser.
 
 ## Cycle notes
 - Baseline captured: app runs, Cerebras streams ~real, Lean proves 5/5, graph renders.

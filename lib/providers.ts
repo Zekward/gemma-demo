@@ -4,6 +4,8 @@
 // latency on the server as tokens arrive, then forward both tokens and live
 // metrics to the browser over SSE.
 
+import { SAMPLING } from "@/lib/sampling";
+
 export type ProviderId = "cerebras" | "gpu";
 
 export type ProviderConfig = {
@@ -167,7 +169,7 @@ function realStream(cfg: ProviderConfig, messages: ChatMessage[]): ReadableStrea
           // Thinking models (Gemma 4 31B-IT) spend ~700 tokens reasoning before
           // answering, so the budget must leave room for both the hidden thought
           // and the visible verdict. Non-thinking hosts just stop early.
-          body: JSON.stringify({ model: cfg.model, messages: normalizeMessages(cfg, messages), stream: true, temperature: 0.3, max_tokens: 1500 }),
+          body: JSON.stringify({ model: cfg.model, messages: normalizeMessages(cfg, messages), stream: true, temperature: SAMPLING.temperature, max_tokens: SAMPLING.maxTokens }),
         });
 
         if (!res.ok || !res.body) {

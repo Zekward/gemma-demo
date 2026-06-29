@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BONDS, getBond, buildGraph, similarBonds } from "@/lib/bonds";
 import KnowledgeGraph from "@/components/KnowledgeGraph";
 import Ingestion from "@/components/Ingestion";
+import { SAMPLING } from "@/lib/sampling";
 
 type Metrics = {
   provider: "cerebras" | "gpu";
@@ -229,6 +230,8 @@ export default function Home() {
         />
       )}
 
+      <ControlledComparison />
+
       {/* SPLIT SCREEN */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <ProviderPanel
@@ -430,6 +433,31 @@ function RaceStrip({
         )}
         {!(cStatus === "done") && !idle && <span className="text-[var(--muted)]">racing…</span>}
       </div>
+    </div>
+  );
+}
+
+// Makes the A/B honest and legible: everything except the inference engine is
+// held identical, so the speed gap is attributable to the hardware, not a
+// stacked deck. Sampling values come from the same constant the API sends.
+function ControlledComparison() {
+  const holds = [
+    "same Gemma model",
+    "same prompt",
+    `temperature ${SAMPLING.temperature}`,
+    `max ${SAMPLING.maxTokens.toLocaleString()} tokens`,
+    "both pre-warmed",
+    "identical server-side timing",
+  ];
+  return (
+    <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--panel)]/60 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--accent)]">Controlled A/B</span>
+      <span className="text-[11px] text-[var(--muted)]">only the inference engine differs:</span>
+      {holds.map((h) => (
+        <span key={h} className="inline-flex items-center gap-1 text-[11px] text-[var(--foreground)]/75">
+          <span className="text-[var(--good)]">✓</span>{h}
+        </span>
+      ))}
     </div>
   );
 }
