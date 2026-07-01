@@ -1,6 +1,6 @@
 """Local UI backend: serves the static app + /api/query (NL -> filter via Gemma-4 on Cerebras).
 The API key is read server-side from ../.cerebras.env and never reaches the browser."""
-import json, sys, pathlib, subprocess, base64, os, hashlib
+import json, sys, pathlib, subprocess, base64, os, hashlib, time, threading, queue, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent / "agents")); sys.path.insert(0, str(ROOT.parent))
@@ -105,6 +105,72 @@ def apply_filter(f):
         out.append(n["id"])
     return out
 
+# --- Cerebras vs GPU race (ported from the Next.js lib/providers.ts) ----------
+def _envkv():
+    kv = {}
+    for fn in (".env.local", ".cerebras.env"):
+        p = ROOT.parent / fn
+        if p.exists():
+            for l in p.read_text().splitlines():
+                l = l.strip()
+                if l and not l.startswith("#") and "=" in l:
+                    k, v = l.split("=", 1); kv.setdefault(k.strip(), v.strip())
+    for k in ("CEREBRAS_API_KEY", "CEREBRAS_BASE_URL", "CEREBRAS_MODEL",
+              "GPU_API_KEY", "GPU_BASE_URL", "GPU_MODEL", "GPU_LABEL"):
+        if not kv.get(k) and os.environ.get(k):   # Render / prod: keys come from env vars
+            kv[k] = os.environ[k]
+    return kv
+_ENV = _envkv()
+PROV = {
+    "cerebras": {"label": "Cerebras", "base": _ENV.get("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1"),
+                 "key": _ENV.get("CEREBRAS_API_KEY"), "model": _ENV.get("CEREBRAS_MODEL", "gemma-4-31b")},
+    "gpu": {"label": _ENV.get("GPU_LABEL", "Together AI"), "base": _ENV.get("GPU_BASE_URL", "https://api.together.xyz/v1"),
+            "key": _ENV.get("GPU_API_KEY"), "model": _ENV.get("GPU_MODEL", "google/gemma-4-31B-it")},
+}
+def _bond_facts(n):
+    pr = n.get("principal")
+    return (f"{n['issuer']} {n.get('maturity') or ''} ({n['id']})\n"
+            f"  form: {n['form']}  coupon: {n.get('coupon')}%  maturity: {n.get('maturity')}  "
+            f"principal: ${(pr // 1000000) if pr else '—'}mm  seniority: {n.get('seniority')}  144A: {n.get('is_144a')}\n"
+            f"  features: {'; '.join((n.get('features') or [])[:3])}")
+def _compare_messages(a, b):
+    return [{"role": "system", "content": "You are a fixed-income research assistant for institutional credit analysts. "
+             "Answer only from the figures provided. Be concise and decisive, use exact numbers, never invent data. "
+             "Structure: a one-line verdict, then the carry/duration/credit trade-off, then who each suits."},
+            {"role": "user", "content": f"Compare these two bonds and tell me which is the better buy.\n\n{_bond_facts(a)}\n\n{_bond_facts(b)}\n\nKeep it under 160 words."}]
+
+def _stream_provider(pid, messages, q):
+    cfg = PROV[pid]; start = time.time(); ttft = None; tokens = 0; text = ""
+    def emit(t, **kw): q.put({"provider": pid, "model": cfg["model"], "t": t, **kw})
+    if not cfg.get("key"):
+        emit("error", message=f"{cfg['label']}: no API key"); emit("done", ttftMs=None, tokens=0, elapsedMs=0, tps=0); return
+    try:
+        body = json.dumps({"model": cfg["model"], "messages": messages, "stream": True,
+                           "temperature": 0.3, "max_tokens": 700}).encode()
+        req = urllib.request.Request(cfg["base"] + "/chat/completions", data=body,
+              headers={"Authorization": f"Bearer {cfg['key']}", "Content-Type": "application/json",
+                       "User-Agent": "exabond/0.1", "Accept": "text/event-stream"})
+        resp = urllib.request.urlopen(req, timeout=180)
+        for raw in resp:
+            line = raw.decode("utf-8", "ignore").strip()
+            if not line.startswith("data:"): continue
+            payload = line[5:].strip()
+            if payload == "[DONE]": break
+            try:
+                j = json.loads(payload); delta = (j.get("choices") or [{}])[0].get("delta", {}).get("content") or ""
+            except Exception: continue
+            if delta:
+                if ttft is None: ttft = int((time.time() - start) * 1000)
+                text += delta; tokens = max(1, len(text) // 4); el = int((time.time() - start) * 1000)
+                emit("token", v=delta)
+                emit("metrics", ttftMs=ttft, tokens=tokens, elapsedMs=el, tps=round(tokens / (el / 1000), 1) if el > 0 else 0)
+        el = int((time.time() - start) * 1000)
+        emit("done", ttftMs=ttft, tokens=tokens, elapsedMs=el, tps=round(tokens / (el / 1000), 1) if el > 0 else 0)
+    except Exception as e:
+        emit("error", message=f"{cfg['label']}: {str(e)[:140]}")
+        emit("done", ttftMs=ttft, tokens=tokens, elapsedMs=int((time.time() - start) * 1000), tps=0)
+
+
 class H(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         b = body if isinstance(body, bytes) else body.encode()
@@ -126,7 +192,33 @@ class H(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(n) or b"{}")
         if self.path == "/api/query": return self._query(body)
         if self.path == "/api/parallel": return self._parallel(body)
+        if self.path == "/api/compare": return self._compare(body)
         return self._send(404, b"no", "text/plain")
+
+    def _compare(self, body):
+        a = next((x for x in NODES if x["id"] == body.get("aId")), None)
+        b = next((x for x in NODES if x["id"] == body.get("bId")), None)
+        if not a or not b: return self._send(400, json.dumps({"error": "unknown bond"}))
+        msgs = _compare_messages(a, b)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        # meta event so the UI can label panels before tokens arrive
+        meta = {"t": "start", "a": {"id": a["id"], "issuer": a["issuer"]}, "b": {"id": b["id"], "issuer": b["issuer"]},
+                "models": {"cerebras": PROV["cerebras"]["model"], "gpu": PROV["gpu"]["model"]}}
+        self.wfile.write(f"data: {json.dumps(meta)}\n\n".encode()); self.wfile.flush()
+        q = queue.Queue()
+        for p in ("cerebras", "gpu"):
+            threading.Thread(target=_stream_provider, args=(p, msgs, q), daemon=True).start()
+        done = 0
+        try:
+            while done < 2:
+                ev = q.get()
+                self.wfile.write(f"data: {json.dumps(ev)}\n\n".encode()); self.wfile.flush()
+                if ev["t"] == "done": done += 1
+        except Exception:
+            pass
 
     def _query(self, body):
         q = body.get("q", "").strip()
@@ -155,6 +247,8 @@ class H(BaseHTTPRequestHandler):
         self._send(200, json.dumps(out))
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-    print(f"bondsec UI on http://localhost:{port}  (model={G.MODEL}, {len(NODES)} nodes)")
-    ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+    env_port = os.environ.get("PORT")                       # Render sets PORT
+    port = int(env_port) if env_port else (int(sys.argv[1]) if len(sys.argv) > 1 else 8765)
+    host = "0.0.0.0" if env_port else "127.0.0.1"           # bind public only in prod
+    print(f"exabond UI on {host}:{port}  (model={G.MODEL}, {len(NODES)} nodes)", flush=True)
+    ThreadingHTTPServer((host, port), H).serve_forever()

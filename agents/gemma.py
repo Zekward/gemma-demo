@@ -1,11 +1,17 @@
 """Cerebras gemma-4-31b client: UA-fixed, rate-limited (req/min + tok/min), concurrent, JSON-robust."""
 from __future__ import annotations
-import json, re, time, threading, urllib.request, urllib.error, pathlib
+import os, json, re, time, threading, urllib.request, urllib.error, pathlib
 from concurrent.futures import ThreadPoolExecutor
 
 _ENV = pathlib.Path(__file__).resolve().parent.parent / ".cerebras.env"
-_kv = dict(l.strip().split("=", 1) for l in _ENV.read_text().splitlines() if "=" in l)
-KEY, MODEL = _kv["CEREBRAS_API_KEY"], _kv["CEREBRAS_MODEL"]
+_kv = {}
+if _ENV.exists():
+    for _l in _ENV.read_text().splitlines():
+        _l = _l.strip()
+        if "=" in _l and not _l.startswith("#"):
+            _k, _v = _l.split("=", 1); _kv[_k.strip()] = _v.strip()
+KEY = _kv.get("CEREBRAS_API_KEY") or os.environ.get("CEREBRAS_API_KEY", "")
+MODEL = _kv.get("CEREBRAS_MODEL") or os.environ.get("CEREBRAS_MODEL", "gemma-4-31b")
 URL = "https://api.cerebras.ai/v1/chat/completions"
 UA = "bondsec/0.1"
 
@@ -60,6 +66,7 @@ def _record(wall, u, ti, headers):
         _metrics.append(m)
         if METRICS_PATH:
             with open(METRICS_PATH, "a") as f: f.write(json.dumps(m) + "\n")
+    return m
 
 def chat(messages, max_tokens=900, temperature=0.2, est_tokens=None, tries=5) -> tuple[str, dict]:
     if est_tokens is None:
@@ -76,7 +83,8 @@ def chat(messages, max_tokens=900, temperature=0.2, est_tokens=None, tries=5) ->
             r = json.load(resp); wall = time.time() - t0
             u = r.get("usage", {}) or {}
             _lim.record(u.get("total_tokens", est_tokens))
-            _record(wall, u, r.get("time_info", {}) or {}, resp.headers)
+            m = _record(wall, u, r.get("time_info", {}) or {}, resp.headers)
+            u = dict(u); u["_tps"] = m["out_tps_wall"]; u["_tps_server"] = m["out_tps_server"]; u["_wall"] = m["wall_s"]
             return r["choices"][0]["message"]["content"], u
         except urllib.error.HTTPError as e:
             code = e.code

@@ -5,11 +5,33 @@
   *{box-sizing:border-box}html,body{margin:0;height:100%}
   body{font:14px/1.5 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;color:var(--ink);background:#fff}
   #app{display:grid;height:100vh;grid-template-areas:"hd hd""chat chat""graph insp";
-       grid-template-rows:auto 29vh 1fr;grid-template-columns:1.6fr 1fr}
+       grid-template-rows:auto 44vh 1fr;grid-template-columns:1.6fr 1fr}
   header{grid-area:hd;padding:9px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:baseline;gap:12px}
   header b{font-weight:600;font-size:15px}header span{color:var(--mut);font-size:12px}
   section{min-height:0;min-width:0}
-  #chat{grid-area:chat;border-bottom:1px solid var(--bd);display:flex;flex-direction:column}
+  #chat{grid-area:chat;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;position:relative}
+  #vresize{position:absolute;left:0;right:0;bottom:-4px;height:9px;cursor:row-resize;z-index:6;display:flex;align-items:center;justify-content:center}
+  #vresize::before{content:'';width:46px;height:4px;border-radius:3px;background:var(--bd)}
+  #vresize:hover::before{background:var(--acc)}
+  .summary{padding:12px 16px 4px}
+  .summary h3{margin:0 0 2px;font-size:16px;font-weight:600}
+  .summary .lead{color:var(--mut);font-size:12.5px;margin-bottom:12px;line-height:1.5}
+  .scards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .scard{border:1px solid var(--bd);border-radius:8px;padding:7px 13px;min-width:104px}
+  .scard .v{font-size:20px;font-weight:600;line-height:1.15}.scard .v small{font-size:12px;color:var(--mut);font-weight:400}
+  .scard .k{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  .sgrid{display:grid;grid-template-columns:1.35fr 1fr;gap:22px}
+  .sgrid h4{margin:0 0 6px;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+  .bar{display:grid;grid-template-columns:60px 1fr auto;align-items:center;gap:8px;margin:3px 0;font-size:12.5px}
+  .bar .lbl{font-family:ui-monospace,Menlo,monospace}
+  .bar .track{background:var(--card);border-radius:4px;height:15px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:4px}
+  .bar .n{color:var(--mut);font-size:11.5px;white-space:nowrap}
+  .bar .desc{grid-column:2/4;color:var(--mut);font-size:11px;margin:-1px 0 4px}
+  .irow{display:flex;justify-content:space-between;padding:2.5px 0;border-bottom:1px solid var(--bd);font-size:12.5px}
+  .irow span:last-child{color:var(--mut);font-family:ui-monospace,monospace}
+  #effortbar,#inbar{display:none}  /* chat controls replaced by the document summary */
+  #msgs{padding-bottom:6px}
   #msgs{flex:1;overflow:auto;padding:12px 16px}
   #inbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--bd)}
   #q{flex:1;padding:9px 12px;border:1px solid var(--bd);border-radius:8px;font:inherit;outline:none}
@@ -43,6 +65,22 @@
   .agentc:hover{border-color:var(--acc)}
   .agentc .ah{font-size:12px;margin-bottom:5px}
   .agentc .ab{font-size:12.5px;line-height:1.5;color:var(--ink);white-space:pre-wrap}
+  #race{padding:9px 14px;border:0;background:#eb6834;color:#fff;border-radius:8px;cursor:pointer;font:inherit;white-space:nowrap}
+  .race{font-size:13px}
+  .rhdr{font-weight:500}.rsub{color:var(--mut);font-size:12px;margin:2px 0 8px}
+  .rspeed b{color:#2a6cf0;font-size:15px}
+  .rchartwrap{position:relative;height:160px;border:1px solid var(--bd);border-radius:8px;margin-bottom:8px}
+  #rchart{position:absolute;inset:0;width:100%;height:100%}
+  .rticks{position:absolute;left:0;right:0;bottom:2px;height:12px;pointer-events:none}
+  .rticks span{position:absolute;transform:translateX(-50%);bottom:0;font-size:9px;color:var(--mut);font-family:ui-monospace,monospace}
+  .rcols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .rcol{border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-width:0}
+  .rcol.cere{border-color:#2a6cf0}
+  .rlabel{font-weight:500;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+  .rmodel{font-size:10px;color:var(--mut);font-family:ui-monospace,monospace}
+  .rmetrics{display:flex;gap:12px;margin:6px 0;font-size:10px;color:var(--mut)}
+  .rmetrics b{font-size:15px;font-weight:600;display:block;color:var(--ink)}
+  .rtext{font-size:12px;line-height:1.45;white-space:pre-wrap;height:150px;overflow:auto;color:var(--ink)}
   #effortbar{display:flex;align-items:center;gap:8px;padding:5px 16px;border-top:1px solid var(--bd);font-size:12px;color:var(--mut)}
   #effortbar .seg{display:inline-flex;border:1px solid var(--bd);border-radius:7px;overflow:hidden}
   #effortbar .seg button{border:0;border-right:1px solid var(--bd);background:#fff;padding:3px 11px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink)}
@@ -56,7 +94,8 @@
     <div id="msgs"></div>
     <div id="effortbar"><span class="muted">/parallel agents effort</span><span class="seg"><button data-e="small">small</button><button data-e="mid" class="on">mid</button><button data-e="high">high</button><button data-e="nuclear">nuclear</button></span><span class="muted" style="margin-left:auto">nuclear → full filings + 👁 Gemma vision</span></div>
     <div id="inbar"><input id="q" placeholder='Search bonds, or type "/parallel agents" to research the focused set…' autocomplete="off">
-      <button id="send">Search</button></div>
+      <button id="send">Search</button><button id="race" title="Cerebras vs GPU throughput race">⚡ Race</button></div>
+    <div id="vresize" title="drag to resize chat"></div>
   </section>
   <section id="graph"><canvas id="cv"></canvas>
     <div class="hud"><b>Graph explorer</b> · all nodes · edges dynamically generated by similarity · click a node or edge</div>
@@ -73,14 +112,47 @@ const EC={sibling_tranche:'#2a6cf0',supersedes:'#eb6834',shelf_variant:'#11936b'
 fetch('data/graph.json').then(r=>r.json()).then(d=>{
   DATA=d;NODES=d.nodes;EDGES=d.edges;NODES.forEach(n=>byId[n.id]=n);
   document.getElementById('stat').textContent=`${d.stats.nodes} bonds · ${d.stats.edges} similarity edges · ${d.stats.issuers} issuers · Lean: ${d.stats.lean_nodes} nodes`;
-  legend();resize();fit();
-  msg('assistant',`<div class="bub">Loaded <b>${d.stats.nodes}</b> bond filings and <b>${d.stats.edges}</b> similarity edges from the past week. Ask a question to focus the graph — I'll translate it to a <span class="tag" style="color:var(--acc)">search_db</span> call with Gemma-4.</div>`);
+  legend();resize();fit();renderSummary();
 });
 function legend(){
   const rels=Object.keys(EC).slice(0,6).map(k=>`<span class="pill"><span style="display:inline-block;width:18px;height:0;border-top:3px solid ${EC[k]};vertical-align:middle;margin-right:5px"></span>${k}</span>`).join('');
   document.getElementById('legend').innerHTML=`<div class="muted" style="font-size:12px;margin-bottom:4px">edge types</div>${rels}<div class="muted" style="font-size:12px;margin:10px 0 2px">node = one filing, coloured by issuer; size = #similar peers</div>`;
   const ELEG=[['supersedes','lifecycle (supersedes)'],['sibling_tranche','sibling tranche'],['shelf_variant','shelf variant'],['cross_issuer_comparable','cross-issuer'],['reopening','reopening'],['same_issuer_comparable','same issuer · context']];
   document.getElementById('elegend').innerHTML='<div class="ttl">edge = relationship</div>'+ELEG.map(([k,l])=>`<div class="r"><i style="border-color:${EC[k]}"></i>${l}</div>`).join('');
+}
+function renderSummary(){
+  const ns=NODES,N=ns.length;
+  const dates=ns.map(n=>n.date).filter(Boolean).sort();
+  const dr=dates.length?`${dates[0]} – ${dates[dates.length-1]}`:'';
+  const forms={};ns.forEach(n=>forms[n.form]=(forms[n.form]||0)+1);
+  const STR=/auto.?call|contingent|barrier|underlying|linked to|worst|buffer|market.?linked|step.?up|range accrual|leverag/i;
+  let struct=0,fixed=0,other=0;
+  ns.forEach(n=>{const f=(n.features||[]).join(' ');if(STR.test(f))struct++;else if(n.coupon!=null)fixed++;else other++;});
+  const iss={};ns.forEach(n=>iss[n.issuer]=(iss[n.issuer]||0)+1);
+  const topIss=Object.entries(iss).sort((a,b)=>b[1]-a[1]).slice(0,8);const nIss=Object.keys(iss).length;
+  const FD={'424B2':'pricing / prospectus supplement','FWP':'free writing prospectus (term sheet)','424B3':'prospectus supplement','424B5':'plain corporate bond takedown','8-K':'SpaceX 144A senior notes','424B7':'prospectus supplement'};
+  const FC={'424B2':'#2a6cf0','FWP':'#1baf7a','424B3':'#eda100','424B5':'#8a4fd0','8-K':'#e34948'};
+  const maxF=Math.max(...Object.values(forms));
+  const formBars=Object.entries(forms).sort((a,b)=>b[1]-a[1]).map(([f,c])=>
+    `<div class="bar"><span class="lbl">${f}</span><div class="track"><div class="fill" style="width:${100*c/maxF}%;background:${FC[f]||'#888'}"></div></div><span class="n">${c.toLocaleString()} · ${(100*c/N).toFixed(1)}%</span><div class="desc">${FD[f]||''}</div></div>`).join('');
+  const maxI=Math.max(struct,fixed,other,1);
+  const instrBars=[['structured / market-linked',struct,'#2a6cf0'],['fixed-coupon bonds',fixed,'#1baf7a'],['other / uncertain',other,'#c0c6d0']].map(([l,c,col])=>
+    `<div class="bar"><span class="lbl" style="font-family:inherit;font-size:11px">${l}</span><div class="track"><div class="fill" style="width:${100*c/maxI}%;background:${col}"></div></div><span class="n">${c.toLocaleString()} · ${(100*c/N).toFixed(0)}%</span></div>`).join('');
+  const issRows=topIss.map(([i,c])=>`<div class="irow"><span>${esc(i.slice(0,34))}</span><span>${c}</span></div>`).join('');
+  document.getElementById('msgs').innerHTML=`<div class="summary">
+    <h3>📄 The corpus — ${N.toLocaleString()} SEC filings scraped <span style="font-weight:400;color:var(--mut);font-size:13px">· ${dr}</span></h3>
+    <div class="lead">Every one is an HTML securities-<b>offering</b> document (the prospectus family + term sheets). <b>None are 10-K or 10-Q</b> — this is new debt <i>issuance</i>, and <b>~${(100*struct/N).toFixed(0)}% are bank structured notes</b>, not plain corporate bonds.</div>
+    <div class="scards">
+      <div class="scard"><div class="v">${N.toLocaleString()}</div><div class="k">filings</div></div>
+      <div class="scard"><div class="v">${(100*struct/N).toFixed(0)}<small>%</small></div><div class="k">structured notes</div></div>
+      <div class="scard"><div class="v">${nIss}</div><div class="k">issuers</div></div>
+      <div class="scard"><div class="v">${Object.keys(forms).length}</div><div class="k">form types</div></div>
+      <div class="scard"><div class="v">0</div><div class="k">10-K / 10-Q</div></div>
+    </div>
+    <div class="sgrid">
+      <div><h4>Form type — what kind of filing</h4>${formBars}</div>
+      <div><h4>Instrument type</h4>${instrBars}<h4 style="margin-top:12px">Top issuers (bank desks)</h4>${issRows}</div>
+    </div></div>`;
 }
 // ---- view / render ----
 function resize(){const r=cv.parentElement.getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;if(!userMoved)fit();else draw();}
@@ -196,4 +268,49 @@ function focusHl(){if(!hl.size){draw();return;}userMoved=true;let a=1e9,b=1e9,c=
   if(a>c){draw();return;}const W=cv.width,H=cv.height,bw=(c-a)||200,bh=(d-b)||200;view.s=Math.min(W/bw,H/bh,3)*0.8;view.x=W/2-(a+c)/2*view.s;view.y=H/2-(b+d)/2*view.s;draw();}
 document.getElementById('send').onclick=run;document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
 document.querySelectorAll('#effortbar .seg button').forEach(b=>b.onclick=()=>{effort=b.dataset.e;document.querySelectorAll('#effortbar .seg button').forEach(x=>x.classList.toggle('on',x===b));});
+(()=>{const app=document.getElementById('app'),hdr=document.querySelector('header');let vr=false;
+ document.getElementById('vresize').addEventListener('mousedown',e=>{vr=true;e.preventDefault();document.body.style.userSelect='none';document.body.style.cursor='row-resize';});
+ addEventListener('mousemove',e=>{if(!vr)return;const h=Math.max(120,Math.min(innerHeight*0.74,e.clientY-app.getBoundingClientRect().top-hdr.offsetHeight));app.style.gridTemplateRows=`auto ${h}px 1fr`;resize();});
+ addEventListener('mouseup',()=>{if(vr){vr=false;document.body.style.userSelect='';document.body.style.cursor='';resize();}});})();
+// ---- Cerebras vs GPU race (cumulative tokens vs time-since-first-token) ----
+function raceCol(pid,label,cls){return `<div class="rcol ${cls}" id="rc-${pid}"><div class="rlabel"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${pid==='cerebras'?'#2a6cf0':'#9aa3b0'};margin-right:5px;vertical-align:middle"></span>${label}</span><span class="rmodel">…</span></div><div class="rmetrics"><span>TTFT<b class="m-ttft">—</b>ms</span><span>tok/s<b class="m-tps">—</b></span><span>latency<b class="m-lat">—</b>s</span><span>tokens<b class="m-tok">—</b></span></div><div class="rtext"></div></div>`;}
+function raceShell(){return `<div class="bub race" style="background:#fff;border:1px solid var(--bd);max-width:100%;width:100%;padding:10px 12px"><div class="rhdr">⚡ Cerebras vs GPU <span class="rspeed muted" style="margin-left:6px">racing…</span></div><div class="rsub">same Gemma model · same prompt · only the inference engine differs</div><div class="rchartwrap"><svg id="rchart" viewBox="0 0 100 40" preserveAspectRatio="none"></svg><div class="rticks"></div><div style="position:absolute;top:4px;left:6px;font-size:10px;color:var(--mut)">cumulative tokens · time since first token (log)</div></div><div class="rcols">${raceCol('cerebras','Cerebras','cere')}${raceCol('gpu','GPU · Together','')}</div></div>`;}
+function pushSample(arr,m){const pt={ms:m.elapsedMs,tokens:m.tokens};const last=arr[arr.length-1];if(last&&pt.ms<=last.ms){last.tokens=Math.max(last.tokens,pt.tokens);}else arr.push(pt);}
+function drawRChart(root,st){const W=100,H=40,padL=2,padR=2,padT=4,padB=6;
+  const rel=s=>s.length?s.map(p=>({e:Math.max(0,p.ms-s[0].ms),tok:p.tokens})):[];
+  const cR=rel(st.cerebras.s),gR=rel(st.gpu.s);const maxTok=Math.max(1,...cR.map(p=>p.tok),...gR.map(p=>p.tok));
+  const E0=10,dataMaxE=Math.max(1,...cR.map(p=>p.e),...gR.map(p=>p.e));
+  const E1=Math.pow(10,Math.ceil(Math.log10(Math.max(dataMaxE,1000))));const l0=Math.log10(E0),l1=Math.log10(E1),yMax=maxTok*1.12;
+  const X=e=>padL+((Math.log10(Math.min(E1,Math.max(E0,e)))-l0)/(l1-l0))*(W-padL-padR);
+  const Y=t=>H-padB-(t/yMax)*(H-padT-padB);
+  const plat=(r,done)=>done&&r.length?[...r,{e:E1,tok:r[r.length-1].tok}]:r;
+  const cP=plat(cR,st.cerebras.done),gP=plat(gR,st.gpu.done);
+  const line=r=>r.map((p,i)=>`${i?'L':'M'}${X(p.e).toFixed(2)} ${Y(p.tok).toFixed(2)}`).join(' ');
+  const decades=[];for(let d=l0;d<=l1+1e-9;d++)decades.push(Math.round(Math.pow(10,d)));
+  let svg='';decades.forEach(d=>{svg+=`<line x1="${X(d)}" y1="${padT}" x2="${X(d)}" y2="${H-padB}" stroke="#e7e7e7" stroke-width="0.4" vector-effect="non-scaling-stroke"/>`;});
+  svg+=`<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="#ccc" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
+  if(gP.length>1)svg+=`<path d="${line(gP)}" fill="none" stroke="#9aa3b0" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  if(cP.length>1)svg+=`<path d="${line(cP)}" fill="none" stroke="#2a6cf0" stroke-width="1.9" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  root.querySelector('#rchart').innerHTML=svg;
+  root.querySelector('.rticks').innerHTML=decades.map(d=>`<span style="left:${X(d)}%">${+(d/1000).toFixed(d<1000?2:0)}s</span>`).join('');}
+async function runRace(aId,bId){
+  const turn=msg('assistant',raceShell());const root=turn.querySelector('.race');
+  const st={cerebras:{s:[],t:'',m:null,done:false},gpu:{s:[],t:'',m:null,done:false}};
+  const setText=(pid,t)=>{const el=root.querySelector('#rc-'+pid+' .rtext');el.textContent=t;el.scrollTop=el.scrollHeight;};
+  const setMx=(pid,m)=>{const c=root.querySelector('#rc-'+pid);c.querySelector('.m-ttft').textContent=m.ttftMs!=null?m.ttftMs:'—';c.querySelector('.m-tps').textContent=m.tps!=null?m.tps:'—';c.querySelector('.m-lat').textContent=m.elapsedMs?(m.elapsedMs/1000).toFixed(2):'—';c.querySelector('.m-tok').textContent=m.tokens!=null?m.tokens:'—';};
+  const setSpeed=()=>{const c=st.cerebras.m,g=st.gpu.m;if(c&&g&&g.tps>0){const sp=c.tps/g.tps;root.querySelector('.rspeed').innerHTML=`<b>${sp.toFixed(sp>=10?0:1)}× faster</b>`;}};
+  try{
+    const res=await fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({aId,bId})});
+    const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
+    while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
+      const parts=buf.split('\n\n');buf=parts.pop()||'';
+      for(const p of parts){const l=p.split('\n').find(x=>x.startsWith('data:'));if(!l)continue;let ev;try{ev=JSON.parse(l.slice(5).trim());}catch{continue;}
+        if(ev.t==='start'){root.querySelector('#rc-cerebras .rmodel').textContent=ev.models.cerebras;root.querySelector('#rc-gpu .rmodel').textContent=ev.models.gpu;root.querySelector('.rsub').textContent=`${ev.a.issuer} vs ${ev.b.issuer} · same Gemma · only the engine differs`;continue;}
+        const o=st[ev.provider];if(!o)continue;
+        if(ev.t==='token'){o.t+=ev.v;setText(ev.provider,o.t);}
+        else if(ev.t==='error'){o.t+='\n[error] '+ev.message;setText(ev.provider,o.t);}
+        else if(ev.t==='metrics'||ev.t==='done'){o.m=ev;pushSample(o.s,ev);if(ev.t==='done')o.done=true;setMx(ev.provider,ev);drawRChart(root,st);setSpeed();}
+      }}
+  }catch(e){root.querySelector('.rsub').textContent='race error: '+e.message;}}
+document.getElementById('race').onclick=()=>{const a=(sel&&sel.id&&byId[sel.id])?sel.id:'SPCX-2031';const b=(a==='SPCX-2056')?'SPCX-2031':'SPCX-2056';runRace(a,b);};
 </script></body></html>
