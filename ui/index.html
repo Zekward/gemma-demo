@@ -253,7 +253,8 @@ const row=(k,v)=>`<tr><td class="muted">${k}</td><td>${esc(String(v))}</td></tr>
 // ---- 10-K / 10-Q filings browser (sidecar from tenk.py) ----
 function nodeCik(n){const m=(n.sec_url||'').match(/data\/(\d+)\//);return m?m[1]:null;}
 function filLink(n){const g=FILBY[nodeCik(n)];if(!g)return '';
-  return `<br><a class="sec" href="javascript:void(0)" onclick="showIssuerFilings('${g.cik}')">📄 ${g.tenk} 10-K · ${g.tenq} 10-Q${g.foreign?` · ${g.foreign} foreign`:''} — view filings</a>`;}
+  const lbl=(!g.tenk&&!g.tenq)?(g.ipo?`no 10-K/Q yet · ${g.ipo} IPO docs`:`${g.foreign} foreign reports`):`${g.tenk} 10-K · ${g.tenq} 10-Q${g.foreign?` · ${g.foreign} foreign`:''}`;
+  return `<br><a class="sec" href="javascript:void(0)" onclick="showIssuerFilings('${g.cik}','${n.id}')">📄 ${lbl} — view filings</a>`;}
 let filOnClick=false;
 function showFilings(){if(!FIL){document.getElementById('insp').innerHTML='<h3>📄 10-K / 10-Q</h3><div class="sub">loading… (run <code>python3 tenk.py backfill</code> if empty)</div>';return;}
   const t=FIL.totals;
@@ -261,7 +262,7 @@ function showFilings(){if(!FIL){document.getElementById('insp').innerHTML='<h3>�
     <div class="sub">${t.filings.toLocaleString()} periodic filings for ${t.issuers} bond issuers · <b>${t.tenk}</b> 10-K · <b>${t.tenq}</b> 10-Q · ${t.foreign} foreign-equivalents (20-F/40-F/6-K/18-K). Click an issuer.</div>
     <input id="filq" placeholder="Search issuer, CIK, sector, or form (e.g. NVIDIA, 10-K, banks)…" autocomplete="off">
     <div id="fillist"></div>`;
-  const rowH=g=>`<div class="fisr" onclick="showIssuerFilings('${g.cik}')"><span>${esc(g.issuer.slice(0,34))}</span><span><span class="fchip fk">${g.tenk} K</span><span class="fchip fq">${g.tenq} Q</span>${g.foreign?`<span class="fchip ff">${g.foreign} F</span>`:''}</span></div>`;
+  const rowH=g=>`<div class="fisr" onclick="showIssuerFilings('${g.cik}')"><span>${esc(g.issuer.slice(0,34))}</span><span>${g.tenk||g.tenq?`<span class="fchip fk">${g.tenk} K</span><span class="fchip fq">${g.tenq} Q</span>`:''}${g.foreign?`<span class="fchip ff">${g.foreign} F</span>`:''}${g.ipo?`<span class="fchip ff" title="IPO prospectus — no 10-K/10-Q yet">${g.ipo} IPO</span>`:''}</span></div>`;
   const render=q=>{q=(q||'').trim().toLowerCase();
     const hits=FIL.issuers.filter(g=>!q||g.issuer.toLowerCase().includes(q)||(g.entity||'').toLowerCase().includes(q)
       ||g.cik.includes(q)||(g.sic||'').toLowerCase().includes(q)||g.filings.some(f=>f.form.toLowerCase()===q||f.form.toLowerCase().startsWith(q)));
@@ -273,8 +274,9 @@ function showFilings(){if(!FIL){document.getElementById('insp').innerHTML='<h3>�
 function showIssuerFilings(cik,fromNode){const g=FILBY[cik];if(!g)return;
   const rows=g.filings.map(f=>`<div class="frow"><b>${esc(f.form)}</b> <span class="muted">filed ${f.filed}${f.period?` · period ${f.period}`:''}</span><br>
     <span class="muted" style="font-family:ui-monospace,monospace;font-size:11px">${esc(f.acc)}</span>${f.url?` · <a href="${f.url}" target="_blank">↗ open document</a>`:''}</div>`).join('');
+  const note=(!g.tenk&&!g.tenq)?`<div class="sub" style="background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:7px 10px">${g.ipo?`⏳ <b>No 10-K/10-Q yet</b> — recently IPO'd; the first 10-Q lands after their first full public quarter (the live feed watcher will catch it). Until then the financials are in the IPO prospectus below.`:`No 10-K/10-Q — this issuer files ${g.foreign?'foreign-equivalent reports (20-F/40-F/6-K) shown below':'no periodic reports (SPV — see the parent guarantor)'}.`}</div>`:'';
   document.getElementById('insp').innerHTML=`${fromNode?`<span class="fback" onclick="showNodePanel('${fromNode}')">← bond details</span> · `:''}<span class="fback" onclick="showFilings()">← all issuers</span>
-    <h3>${esc(g.issuer)}</h3><div class="sub">${esc(g.entity||'')} · CIK ${g.cik}${g.sic?` · ${esc(g.sic)}`:''} · <span class="fchip fk">${g.tenk} 10-K</span><span class="fchip fq">${g.tenq} 10-Q</span>${g.foreign?`<span class="fchip ff">${g.foreign} foreign</span>`:''}</div>${rows}`;}
+    <h3>${esc(g.issuer)}</h3><div class="sub">${esc(g.entity||'')} · CIK ${g.cik}${g.sic?` · ${esc(g.sic)}`:''} · <span class="fchip fk">${g.tenk} 10-K</span><span class="fchip fq">${g.tenq} 10-Q</span>${g.foreign?`<span class="fchip ff">${g.foreign} foreign</span>`:''}${g.ipo?`<span class="fchip ff">${g.ipo} IPO docs</span>`:''}</div>${note}${rows}`;}
 function showNodePanel(id){const n=byId[id];if(!n)return;sel=n;draw();renderInsp('node',n,true);}
 document.getElementById('filbtn').onclick=showFilings;
 document.getElementById('filchk').onchange=e=>{filOnClick=e.target.checked;document.getElementById('filtoggle').classList.toggle('on',filOnClick);

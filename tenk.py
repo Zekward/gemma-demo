@@ -24,6 +24,7 @@ HERE = pathlib.Path(__file__).parent
 OUT = HERE / "data"
 PRIMARY = ["10-K", "10-Q", "10-K/A", "10-Q/A"]
 FOREIGN_EQUIV = ["20-F", "40-F", "6-K", "18-K", "20-F/A", "40-F/A", "18-K/A"]
+IPO_DOCS = ["S-1", "S-1/A", "F-1", "F-1/A", "424B4"]   # recent IPOs (e.g. SpaceX): financials live here until the first 10-Q
 ATOM = "{http://www.w3.org/2005/Atom}"
 
 
@@ -82,7 +83,11 @@ def backfill(limit_per_form: int = 4):
                             r.get("accessionNumber", []), r.get("primaryDocument", []),
                             r.get("reportDate", [])))
             got_p = got_f = 0
-            for form_set, tag in ((PRIMARY, "primary"), (FOREIGN_EQUIV, "foreign_equiv")):
+            has_periodic = any(f in PRIMARY or f in FOREIGN_EQUIV for f, *_ in rows)
+            form_sets = [(PRIMARY, "primary"), (FOREIGN_EQUIV, "foreign_equiv")]
+            if not has_periodic:
+                form_sets.append((IPO_DOCS, "ipo_prospectus"))    # newly-public issuer: surface the S-1/424B4
+            for form_set, tag in form_sets:
                 per_form: dict[str, int] = {}
                 for form, fdate, acc, doc, rdate in rows:
                     if form not in form_set or per_form.get(form, 0) >= limit_per_form:

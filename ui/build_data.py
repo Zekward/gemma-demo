@@ -59,13 +59,14 @@ if tk.exists():
     by = {}
     for l in tk.open():
         r = json.loads(l)
-        g = by.setdefault(r["cik"], {"cik": r["cik"], "issuer": r["issuer"], "entity": r.get("entity_name"),
-                                     "sic": r.get("sic"), "tenk": 0, "tenq": 0, "foreign": 0, "filings": []})
-        f = r["form"]
-        if f.startswith("10-K"): g["tenk"] += 1
+        g = by.setdefault(r["cik"], {"cik": r["cik"], "issuer": short(r["issuer"]), "entity": r.get("entity_name"),
+                                     "sic": r.get("sic"), "tenk": 0, "tenq": 0, "foreign": 0, "ipo": 0, "filings": []})
+        f, kind = r["form"], r.get("kind", "primary")
+        if kind == "ipo_prospectus": g["ipo"] += 1
+        elif f.startswith("10-K"): g["tenk"] += 1
         elif f.startswith("10-Q"): g["tenq"] += 1
         else: g["foreign"] += 1
-        g["filings"].append({"form": f, "kind": r["kind"], "filed": r["filing_date"],
+        g["filings"].append({"form": f, "kind": kind, "filed": r["filing_date"],
                              "period": r.get("report_date"), "acc": r["accession"], "url": r.get("doc_url")})
     for g in by.values():
         g["filings"].sort(key=lambda x: x["filed"], reverse=True)
