@@ -52,6 +52,29 @@ for gi, iss in enumerate(order):
 
 stats = {"nodes": len(out_nodes), "edges": len(out_edges), "issuers": len(groups),
          "lean_nodes": len(nlean), "lean_edges": len(elean)}
+
+# --- 10-K/10-Q sidecar (from tenk.py backfill), grouped by issuer CIK -------------
+tk = ROOT / "data/filings_10k10q.jsonl"
+if tk.exists():
+    by = {}
+    for l in tk.open():
+        r = json.loads(l)
+        g = by.setdefault(r["cik"], {"cik": r["cik"], "issuer": r["issuer"], "entity": r.get("entity_name"),
+                                     "sic": r.get("sic"), "tenk": 0, "tenq": 0, "foreign": 0, "filings": []})
+        f = r["form"]
+        if f.startswith("10-K"): g["tenk"] += 1
+        elif f.startswith("10-Q"): g["tenq"] += 1
+        else: g["foreign"] += 1
+        g["filings"].append({"form": f, "kind": r["kind"], "filed": r["filing_date"],
+                             "period": r.get("report_date"), "acc": r["accession"], "url": r.get("doc_url")})
+    for g in by.values():
+        g["filings"].sort(key=lambda x: x["filed"], reverse=True)
+    fil = {"issuers": sorted(by.values(), key=lambda g: -(g["tenk"] + g["tenq"])),
+           "totals": {"filings": sum(len(g["filings"]) for g in by.values()), "issuers": len(by),
+                      "tenk": sum(g["tenk"] for g in by.values()), "tenq": sum(g["tenq"] for g in by.values()),
+                      "foreign": sum(g["foreign"] for g in by.values())}}
+    json.dump(fil, open(ROOT / "ui/data/filings.json", "w"))
+    print(f"filings.json: {fil['totals']}")
 (ROOT / "ui/data").mkdir(parents=True, exist_ok=True)
 json.dump({"nodes": out_nodes, "edges": out_edges, "stats": stats}, open(ROOT / "ui/data/graph.json", "w"))
 print(f"graph.json: {stats}  ({(ROOT/'ui/data/graph.json').stat().st_size//1024} KB)")
