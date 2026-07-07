@@ -13,3 +13,8 @@ __pycache__/
 kernels/bench
 *.o
 *.out
+
+# all env files (Next.js keys)
+.env*
+!.env.example
+graph/kuzu_tenk_db*
