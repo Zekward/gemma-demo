@@ -6,12 +6,29 @@ normalized record** per bond (the single source of truth for the downstream
 RAG / graph-DB / Lean / embedding stages).
 
 ```bash
-python3 bondsec.py --end 2026-06-28 --forms 424B5 --max-docs 12 --save-raw
-# window defaults to the 7 days ending --end (or today). Output: bonds.jsonl
+python3 bondsec.py --end 2026-06-28 --forms 424B5 --max-docs 12 --clean-only --save-raw
+python3 enrich.py                      # OpenFIGI: fill coupon/maturity + classify structured notes
+# window defaults to the 7 days ending --end (or today). Output: bonds.jsonl -> bonds_enriched.jsonl
 ```
 
 No pip install required (stdlib `urllib` only). `edgartools` is the optional
 upgrade for the 424B parser; see "next steps".
+
+## Structured-note classification (added 2026-06-30) — `enrich.py`
+
+The FWP firehose is **dominated by bank structured notes**, and they can't be filtered by issuer name
+alone: the banks **co-file structured notes under the parent** ("MORGAN STANLEY", "CITIGROUP INC",
+"JPMORGAN CHASE & CO"), and those same parents also issue real bonds. So separation must happen
+**after enrichment**, from authoritative signals:
+- `enrich.py` maps each extracted CUSIP -> OpenFIGI -> `name / ticker / marketSector / securityType` and
+  a `securityDescription` ("AAPL 3 11/13/27" — canonical ticker/coupon/maturity, incl. fraction coupons
+  like "11 1/4"). This **fills the coupon** the regex misses on structured notes / preliminary 424B5s.
+- `is_structured_note` = SPV-suffix issuer (`Finance LLC`, `Financial Company`, `Global Markets`) **or**
+  `securityType ~ MTN/structured` **or** a contingent coupon (0% or ≥9% — a payoff multiplier, not a
+  real coupon). Real financial-sector issuers (Ally Financial Inc) deliberately pass.
+- `bondsec.py --clean-only` skips obvious SPV issuers at discovery (cheap pre-filter); the enrichment
+  classifier is the authoritative one. June-2026 reality: the 424B5/FWP weekly flow is ~95% structured
+  notes; genuine clean corporates found include **Charles Schwab 4.603% 2029**, **JBIC 4.625% 2036**.
 
 ## Verified EDGAR mechanics (live-confirmed 2026-06-28)
 
@@ -56,7 +73,10 @@ file you load DuckDB, any graph DB (Kuzu/Neo4j/Memgraph), or emit embedding-trai
 without re-scraping.
 
 ## Next steps
-- Pair each 424B5 with the issuer's FWP (CIK+date) to fill CUSIP/coupon; OpenFIGI to backfill metadata.
+- **[PRIORITY] 424B5↔FWP join.** Confirmed: 424B5 is *preliminary* (1/45 had a CUSIP in June-2026); the
+  CUSIP/coupon are in the FWP. Join 424B5 (structure, operating-company issuer) ⟷ FWP (pricing, CUSIP)
+  by **issuer CIK + offering date**, then run `enrich.py` to classify — that yields clean corporates
+  with full terms. (OpenFIGI backfill: **done**, `enrich.py`.)
 - Tighten indenture linkage to the **supplemental** indenture / officers' certificate for the exact series.
 - Swap the regex extractor for `edgartools`' 424B parser (or a Gemma extraction pass) for robustness.
 - Emit the indenture text as the Lean-formalization input.
