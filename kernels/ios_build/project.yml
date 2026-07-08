@@ -1,0 +1,31 @@
+
+name: kbench
+options:
+  bundleIdPrefix: com.bondsec
+  deploymentTarget:
+    iOS: "13.0"
+settings:
+  base:
+    OTHER_CFLAGS: "-mcpu=apple-a9"
+    GCC_OPTIMIZATION_LEVEL: "3"
+    ENABLE_BITCODE: NO
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: YES
+targets:
+  kbench:
+    type: application
+    platform: iOS
+    sources:
+      - bench.c
+      - candidate.c
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+        UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bondsec.kbench
+        DEVELOPMENT_TEAM: 8QH9YSPT6R
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"

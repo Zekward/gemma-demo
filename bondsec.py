@@ -31,6 +31,11 @@ SUBMISSIONS = "https://data.sec.gov/submissions"
 MIN_INTERVAL = 0.18                                 # ~5.5 req/s, safely under the 10 req/s cap
 CLEAN_BOND_FORMS = ["424B5", "FWP", "424B3"]        # corporate-bond signal
 STRUCTURED_FORMS = ["424B2"]                         # mostly bank structured notes (count only)
+# finance-SPV issuers (Morgan Stanley Finance LLC, JPMorgan Chase Financial Co, BofA Finance LLC,
+# Citigroup Global Markets, GS Finance Corp) issue structured notes, not clean corporate bonds.
+# Match SPV suffixes only, so real financial-sector issuers (Ally Financial Inc) still pass.
+_SPV = re.compile(r"FINANCE\s+(LLC|CORP|CO\b|INC|N\.?V|B\.?V)|FINANCIAL\s+(COMPANY|PRODUCTS|CO\b)|"
+                  r"GLOBAL\s+MARKETS|FUNDING\s+(LLC|CORP|TRUST|INC)|STRUCTURED\s+PRODUCTS", re.I)
 
 _last_req = [0.0]
 
@@ -272,6 +277,8 @@ def main():
     ap.add_argument("--forms", default=",".join(CLEAN_BOND_FORMS),
                     help="comma list of forms to fully fetch (default: clean corporate bonds)")
     ap.add_argument("--max-docs", type=int, default=8, help="cap doc downloads (politeness/demo)")
+    ap.add_argument("--clean-only", action="store_true",
+                    help="skip finance-SPV structured-note issuers; download only clean-corporate candidates")
     ap.add_argument("--no-indenture", action="store_true", help="skip indenture linkage")
     ap.add_argument("--out", default="bonds.jsonl")
     ap.add_argument("--save-raw", action="store_true")
@@ -295,9 +302,18 @@ def main():
     print(f"# discovered {len(hits)} hits across forms={args.forms} (reported total {total})", file=sys.stderr)
 
     save_dir = "data/raw" if args.save_raw else None
-    n = 0
+    n = n_skip = 0
     with open(args.out, "w") as out:
         for h in hits:
+            if args.clean_only and _SPV.search(h.issuer):     # finance-SPV -> structured notes; skip download
+                n_skip += 1
+                rec = BondRecord(bond_id=h.accession, cusips=[], isins=[], issuer_name=h.issuer,
+                                 cik=h.cik, form_type=h.form, filing_date=h.filing_date,
+                                 accession=h.accession, primary_doc_url=h.doc_url,
+                                 terms={"_skipped_spv": True}, indenture=None, raw_text_path=None,
+                                 metadata={"discovered_via": f"EFTS forms={h.form}", "structured_spv": True})
+                out.write(json.dumps(asdict(rec)) + "\n")
+                continue
             if n >= args.max_docs:
                 # still emit a lightweight stub (no download) so the firehose set is complete
                 rec = BondRecord(bond_id=h.accession, cusips=[], isins=[], issuer_name=h.issuer,
@@ -315,7 +331,7 @@ def main():
                   f"indenture={'Y' if rec.indenture else '-'}", file=sys.stderr)
             n += 1
 
-    print(f"# wrote {args.out} ({len(hits)} records, {n} fully parsed)", file=sys.stderr)
+    print(f"# wrote {args.out} ({len(hits)} records, {n} fully parsed, {n_skip} SPV-skipped)", file=sys.stderr)
 
 
 if __name__ == "__main__":

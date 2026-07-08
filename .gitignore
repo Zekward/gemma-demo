@@ -18,3 +18,17 @@ kernels/bench
 .env*
 !.env.example
 graph/kuzu_tenk_db*
+
+# AIQ proprietary data — never commit
+data/aiq_universe*
+data/fmp_*
+data/aiq_issuer_cik.json
+data/aiq_top_issuers.json
+
+# build caches / deps (Next.js)
+node_modules/
+.next/
+# regenerable 38MB EDGAR name->CIK dump (tenk re-downloads on demand)
+data/cik-lookup-data.txt
+# watcher runtime state
+data/.feed_seen.json
